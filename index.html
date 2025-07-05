@@ -1,0 +1,1214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Campa Beverages - Retailer Portal</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+  <style>
+    :root {
+      --primary-color: #2c3e50;
+      --secondary-color: #3498db;
+      --accent-color: #e74c3c;
+      --success-color: #27ae60;
+      --warning-color: #f39c12;
+    }
+    
+    body { 
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+      background-color: #f8f9fa;
+      color: #333;
+    }
+    
+    .navbar-brand {
+      font-weight: bold;
+      color: var(--accent-color) !important;
+    }
+    
+    .product-card {
+      transition: all 0.3s ease;
+      border: none;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    
+    .product-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    }
+    
+    .product-image {
+      height: 200px;
+      object-fit: cover;
+      width: 100%;
+    }
+    
+    .cart-badge {
+      animation: bounce 0.5s ease-in-out;
+    }
+    
+    @keyframes bounce {
+      0%, 20%, 60%, 100% { transform: translateY(0); }
+      40% { transform: translateY(-10px); }
+      80% { transform: translateY(-5px); }
+    }
+    
+    .btn-primary {
+      background-color: var(--secondary-color);
+      border-color: var(--secondary-color);
+    }
+    
+    .btn-success {
+      background-color: var(--success-color);
+      border-color: var(--success-color);
+    }
+    
+    .btn-warning {
+      background-color: var(--warning-color);
+      border-color: var(--warning-color);
+    }
+    
+    .login-container {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    
+    .login-card {
+      background: white;
+      border-radius: 15px;
+      box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+    
+    .cart-sidebar {
+      position: fixed;
+      top: 0;
+      right: -400px;
+      width: 400px;
+      height: 100vh;
+      background: white;
+      box-shadow: -5px 0 15px rgba(0,0,0,0.1);
+      transition: right 0.3s ease;
+      z-index: 1050;
+      overflow-y: auto;
+    }
+    
+    .cart-sidebar.show {
+      right: 0;
+    }
+    
+    .cart-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      z-index: 1040;
+      display: none;
+    }
+    
+    .cart-overlay.show {
+      display: block;
+    }
+    
+    .order-status-pending { background-color: #fff3cd; color: #856404; }
+    .order-status-confirmed { background-color: #d1ecf1; color: #0c5460; }
+    .order-status-delivered { background-color: #d4edda; color: #155724; }
+    .order-status-cancelled { background-color: #f8d7da; color: #721c24; }
+    
+    @media (max-width: 768px) {
+      .cart-sidebar {
+        width: 100vw;
+        right: -100vw;
+      }
+      
+      .product-grid {
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      }
+    }
+    
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+<!-- Login Page -->
+<div id="loginPage" class="login-container">
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-md-8">
+        <div class="login-card">
+          <div class="row g-0">
+            <div class="col-md-6 d-flex align-items-center justify-content-center bg-primary text-white">
+              <div class="text-center p-5">
+                <i class="bi bi-cup-hot-fill" style="font-size: 4rem;"></i>
+                <h2 class="mt-3">Campa Beverages</h2>
+                <p class="lead">Premium Quality Beverages</p>
+                <p>Join our retailer network and grow your business with us!</p>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="p-5">
+                <div id="loginForm">
+                  <h3 class="mb-4">Retailer Login</h3>
+                  <form onsubmit="login(event)">
+                    <div class="mb-3">
+                      <label class="form-label">Email Address</label>
+                      <input type="email" id="loginEmail" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                      <label class="form-label">Password</label>
+                      <input type="password" id="loginPassword" class="form-control" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100 mb-3">Login</button>
+                  </form>
+                  <div class="text-center">
+                    <p>Don't have an account? <a href="#" onclick="showRegisterForm()">Register here</a></p>
+                    <p><a href="index.html">Admin/Operator Portal</a></p>
+                  </div>
+                </div>
+                
+                <div id="registerForm" class="hidden">
+                  <h3 class="mb-4">Retailer Registration</h3>
+                  <form onsubmit="register(event)">
+                    <div class="mb-3">
+                      <label class="form-label">Business Name</label>
+                      <input type="text" id="regBusinessName" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                      <label class="form-label">Owner Name</label>
+                      <input type="text" id="regOwnerName" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                      <label class="form-label">Email Address</label>
+                      <input type="email" id="regEmail" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                      <label class="form-label">Phone Number</label>
+                      <input type="tel" id="regPhone" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                      <label class="form-label">Business Address</label>
+                      <textarea id="regAddress" class="form-control" rows="3" required></textarea>
+                    </div>
+                    <div class="mb-3">
+                      <label class="form-label">GST Number (Optional)</label>
+                      <input type="text" id="regGST" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                      <label class="form-label">Password</label>
+                      <input type="password" id="regPassword" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                      <label class="form-label">Confirm Password</label>
+                      <input type="password" id="regConfirmPassword" class="form-control" required>
+                    </div>
+                    <button type="submit" class="btn btn-success w-100 mb-3">Register</button>
+                  </form>
+                  <div class="text-center">
+                    <p>Already have an account? <a href="#" onclick="showLoginForm()">Login here</a></p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Main App -->
+<div id="mainApp" class="hidden">
+  <!-- Navigation -->
+  <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <div class="container">
+      <a class="navbar-brand" href="#">
+        <i class="bi bi-cup-hot-fill me-2"></i>
+        Campa Beverages
+      </a>
+      <div class="navbar-nav ms-auto">
+        <span class="navbar-text me-3">Welcome, <span id="userName"></span></span>
+        <button class="btn btn-outline-light me-2" onclick="showCart()">
+          <i class="bi bi-cart3"></i>
+          Cart <span id="cartBadge" class="badge bg-warning text-dark">0</span>
+        </button>
+        <button class="btn btn-outline-light" onclick="logout()">
+          <i class="bi bi-box-arrow-right"></i>
+          Logout
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <div class="container mt-4">
+    <!-- Tabs -->
+    <ul class="nav nav-tabs mb-4" id="mainTabs">
+      <li class="nav-item">
+        <a class="nav-link active" data-bs-toggle="tab" href="#productsTab">
+          <i class="bi bi-grid3x3-gap"></i> Products
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" data-bs-toggle="tab" href="#ordersTab">
+          <i class="bi bi-bag-check"></i> My Orders
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" data-bs-toggle="tab" href="#profileTab">
+          <i class="bi bi-person"></i> Profile
+        </a>
+      </li>
+    </ul>
+
+    <!-- Tab Content -->
+    <div class="tab-content">
+      <!-- Products Tab -->
+      <div class="tab-pane fade show active" id="productsTab">
+        <!-- Search and Filter -->
+        <div class="row mb-4">
+          <div class="col-md-6">
+            <div class="input-group">
+              <span class="input-group-text"><i class="bi bi-search"></i></span>
+              <input type="text" id="searchInput" class="form-control" placeholder="Search products..." onkeyup="filterProducts()">
+            </div>
+          </div>
+          <div class="col-md-3">
+            <select id="categoryFilter" class="form-select" onchange="filterProducts()">
+              <option value="">All Categories</option>
+              <option value="Cola">Cola</option>
+              <option value="Fruit Drinks">Fruit Drinks</option>
+              <option value="Energy Drinks">Energy Drinks</option>
+              <option value="Soda">Soda</option>
+              <option value="Water">Water</option>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <select id="sortFilter" class="form-select" onchange="filterProducts()">
+              <option value="name">Sort by Name</option>
+              <option value="price-low">Price: Low to High</option>
+              <option value="price-high">Price: High to Low</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Products Grid -->
+        <div id="productsGrid" class="row g-4">
+          <!-- Products will be loaded here -->
+        </div>
+      </div>
+
+      <!-- Orders Tab -->
+      <div class="tab-pane fade" id="ordersTab">
+        <div class="row">
+          <div class="col-12">
+            <h4>My Orders</h4>
+            <div id="ordersList">
+              <!-- Orders will be loaded here -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Profile Tab -->
+      <div class="tab-pane fade" id="profileTab">
+        <div class="row">
+          <div class="col-md-8">
+            <div class="card">
+              <div class="card-header">
+                <h5>Profile Information</h5>
+              </div>
+              <div class="card-body">
+                <form onsubmit="updateProfile(event)">
+                  <div class="row">
+                    <div class="col-md-6 mb-3">
+                      <label class="form-label">Business Name</label>
+                      <input type="text" id="profileBusinessName" class="form-control">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                      <label class="form-label">Owner Name</label>
+                      <input type="text" id="profileOwnerName" class="form-control">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                      <label class="form-label">Email</label>
+                      <input type="email" id="profileEmail" class="form-control" readonly>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                      <label class="form-label">Phone</label>
+                      <input type="tel" id="profilePhone" class="form-control">
+                    </div>
+                    <div class="col-12 mb-3">
+                      <label class="form-label">Address</label>
+                      <textarea id="profileAddress" class="form-control" rows="3"></textarea>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                      <label class="form-label">GST Number</label>
+                      <input type="text" id="profileGST" class="form-control">
+                    </div>
+                  </div>
+                  <button type="submit" class="btn btn-primary">Update Profile</button>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Cart Sidebar -->
+<div class="cart-overlay" onclick="hideCart()"></div>
+<div class="cart-sidebar" id="cartSidebar">
+  <div class="p-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h5>Shopping Cart</h5>
+      <button class="btn-close" onclick="hideCart()"></button>
+    </div>
+    
+    <div id="cartItems">
+      <!-- Cart items will be loaded here -->
+    </div>
+    
+    <div class="border-top pt-3 mt-3">
+      <div class="form-check mb-3">
+        <input class="form-check-input" type="checkbox" id="includeGST" checked onchange="updateCartTotal()">
+        <label class="form-check-label" for="includeGST">
+          Include GST (18%)
+        </label>
+      </div>
+      
+      <div class="d-flex justify-content-between mb-2">
+        <span>Subtotal:</span>
+        <span id="cartSubtotal">₹0.00</span>
+      </div>
+      <div class="d-flex justify-content-between mb-2">
+        <span>GST (18%):</span>
+        <span id="cartGST">₹0.00</span>
+      </div>
+      <div class="d-flex justify-content-between mb-3 fw-bold">
+        <span>Total:</span>
+        <span id="cartTotal">₹0.00</span>
+      </div>
+      
+      <button class="btn btn-success w-100 mb-2" onclick="proceedToCheckout()" id="checkoutBtn">
+        <i class="bi bi-credit-card"></i> Proceed to Checkout
+      </button>
+      <button class="btn btn-outline-danger w-100" onclick="clearCart()">
+        <i class="bi bi-trash"></i> Clear Cart
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- Firebase SDK -->
+<script type="module">
+  // Import Firebase modules
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+  import { 
+    getAuth, 
+    signInWithEmailAndPassword, 
+    createUserWithEmailAndPassword,
+    signOut,
+    onAuthStateChanged 
+  } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+  import { 
+    getFirestore,
+    collection,
+    doc,
+    setDoc,
+    getDoc,
+    addDoc,
+    updateDoc,
+    query,
+    where,
+    orderBy,
+    getDocs,
+    serverTimestamp
+  } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+
+  // Firebase configuration
+  const firebaseConfig = {
+    apiKey: "AIzaSyBm2Y2-KaPh_9prtDyEh75ys9bOS_YivyU",
+    authDomain: "campacola-45a6c.firebaseapp.com",
+    projectId: "campacola-45a6c",
+    storageBucket: "campacola-45a6c.appspot.com",
+    messagingSenderId: "950062364838",
+    appId: "1:950062364838:web:c016c1c2b63d661dc09c67",
+    measurementId: "G-0F1FMP4D6X"
+  };
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+
+  // Global variables
+  let currentUser = null;
+  let currentRetailer = null;
+  let cart = [];
+  let products = [];
+
+  // Sample products with images
+  const sampleProducts = [
+    {
+      id: 'campa-cola-600',
+      name: 'Campa Cola',
+      size: '600ml',
+      price: 28,
+      image: 'https://images.pexels.com/photos/2775860/pexels-photo-2775860.jpeg?auto=compress&cs=tinysrgb&w=400',
+      category: 'Cola',
+      description: 'Classic cola flavor with a refreshing taste',
+      inStock: true,
+      stockQuantity: 150
+    },
+    {
+      id: 'campa-orange-600',
+      name: 'Campa Orange',
+      size: '600ml',
+      price: 28,
+      image: 'https://images.pexels.com/photos/1435735/pexels-photo-1435735.jpeg?auto=compress&cs=tinysrgb&w=400',
+      category: 'Fruit Drinks',
+      description: 'Zesty orange flavored carbonated drink',
+      inStock: true,
+      stockQuantity: 120
+    },
+    {
+      id: 'campa-lemon-600',
+      name: 'Campa Lemon',
+      size: '600ml',
+      price: 28,
+      image: 'https://images.pexels.com/photos/1435735/pexels-photo-1435735.jpeg?auto=compress&cs=tinysrgb&w=400',
+      category: 'Fruit Drinks',
+      description: 'Tangy lemon flavored refreshing drink',
+      inStock: true,
+      stockQuantity: 100
+    },
+    {
+      id: 'cloudy-lemon-600',
+      name: 'Cloudy Lemon',
+      size: '600ml',
+      price: 30,
+      image: 'https://images.pexels.com/photos/1435735/pexels-photo-1435735.jpeg?auto=compress&cs=tinysrgb&w=400',
+      category: 'Fruit Drinks',
+      description: 'Premium cloudy lemon drink with real fruit pulp',
+      inStock: true,
+      stockQuantity: 80
+    },
+    {
+      id: 'power-up-500',
+      name: 'Power-Up Cola',
+      size: '500ml',
+      price: 32,
+      image: 'https://images.pexels.com/photos/2775860/pexels-photo-2775860.jpeg?auto=compress&cs=tinysrgb&w=400',
+      category: 'Energy Drinks',
+      description: 'High energy cola with added caffeine',
+      inStock: true,
+      stockQuantity: 90
+    },
+    {
+      id: 'campa-soda-500',
+      name: 'Campa Soda',
+      size: '500ml',
+      price: 25,
+      image: 'https://images.pexels.com/photos/2775860/pexels-photo-2775860.jpeg?auto=compress&cs=tinysrgb&w=400',
+      category: 'Soda',
+      description: 'Plain soda water for mixing and refreshment',
+      inStock: true,
+      stockQuantity: 200
+    },
+    {
+      id: 'bubbles-soda-750',
+      name: 'Bubbles Soda',
+      size: '750ml',
+      price: 28,
+      image: 'https://images.pexels.com/photos/2775860/pexels-photo-2775860.jpeg?auto=compress&cs=tinysrgb&w=400',
+      category: 'Soda',
+      description: 'Large bottle of refreshing soda water',
+      inStock: true,
+      stockQuantity: 75
+    },
+    {
+      id: 'spinner-energy-200',
+      name: 'Spinner Energy',
+      size: '200ml',
+      price: 35,
+      image: 'https://images.pexels.com/photos/2775860/pexels-photo-2775860.jpeg?auto=compress&cs=tinysrgb&w=400',
+      category: 'Energy Drinks',
+      description: 'Compact energy drink for instant boost',
+      inStock: true,
+      stockQuantity: 60
+    },
+    {
+      id: 'runner-energy-250',
+      name: 'Runner Energy',
+      size: '250ml',
+      price: 38,
+      image: 'https://images.pexels.com/photos/2775860/pexels-photo-2775860.jpeg?auto=compress&cs=tinysrgb&w=400',
+      category: 'Energy Drinks',
+      description: 'Premium energy drink for athletes',
+      inStock: true,
+      stockQuantity: 45
+    },
+    {
+      id: 'joos-mango-200',
+      name: 'Joos Mango',
+      size: '200ml',
+      price: 22,
+      image: 'https://images.pexels.com/photos/1435735/pexels-photo-1435735.jpeg?auto=compress&cs=tinysrgb&w=400',
+      category: 'Fruit Drinks',
+      description: 'Natural mango juice with real fruit flavor',
+      inStock: true,
+      stockQuantity: 110
+    },
+    {
+      id: 'independence-water-1500',
+      name: 'Independence Water',
+      size: '1.5L',
+      price: 20,
+      image: 'https://images.pexels.com/photos/1000084/pexels-photo-1000084.jpeg?auto=compress&cs=tinysrgb&w=400',
+      category: 'Water',
+      description: 'Pure drinking water in large bottle',
+      inStock: true,
+      stockQuantity: 300
+    },
+    {
+      id: 'sure-water-1000',
+      name: 'Sure Water',
+      size: '1L',
+      price: 18,
+      image: 'https://images.pexels.com/photos/1000084/pexels-photo-1000084.jpeg?auto=compress&cs=tinysrgb&w=400',
+      category: 'Water',
+      description: 'Premium quality drinking water',
+      inStock: true,
+      stockQuantity: 250
+    }
+  ];
+
+  // Initialize app
+  function initApp() {
+    products = sampleProducts;
+    loadProducts();
+    
+    // Check if user is logged in
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        currentUser = user;
+        await loadRetailerData();
+        showMainApp();
+      } else {
+        showLoginPage();
+      }
+    });
+  }
+
+  // Show/Hide pages
+  function showLoginPage() {
+    document.getElementById('loginPage').classList.remove('hidden');
+    document.getElementById('mainApp').classList.add('hidden');
+  }
+
+  function showMainApp() {
+    document.getElementById('loginPage').classList.add('hidden');
+    document.getElementById('mainApp').classList.remove('hidden');
+    loadProducts();
+    loadOrders();
+    loadProfile();
+  }
+
+  // Authentication functions
+  async function login(event) {
+    event.preventDefault();
+    const email = document.getElementById('loginEmail').value;
+    const password = document.getElementById('loginPassword').value;
+
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      currentUser = userCredential.user;
+      
+      // Check if retailer exists and is approved
+      const retailerDoc = await getDoc(doc(db, 'retailers', currentUser.uid));
+      if (!retailerDoc.exists()) {
+        alert('Retailer account not found. Please register first.');
+        await signOut(auth);
+        return;
+      }
+      
+      const retailerData = retailerDoc.data();
+      if (!retailerData.isApproved) {
+        alert('Your account is pending admin approval. Please wait for confirmation.');
+        await signOut(auth);
+        return;
+      }
+      
+      currentRetailer = retailerData;
+      showMainApp();
+    } catch (error) {
+      alert('Login failed: ' + error.message);
+    }
+  }
+
+  async function register(event) {
+    event.preventDefault();
+    
+    const businessName = document.getElementById('regBusinessName').value;
+    const ownerName = document.getElementById('regOwnerName').value;
+    const email = document.getElementById('regEmail').value;
+    const phone = document.getElementById('regPhone').value;
+    const address = document.getElementById('regAddress').value;
+    const gst = document.getElementById('regGST').value;
+    const password = document.getElementById('regPassword').value;
+    const confirmPassword = document.getElementById('regConfirmPassword').value;
+
+    if (password !== confirmPassword) {
+      alert('Passwords do not match');
+      return;
+    }
+
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      // Save retailer data
+      await setDoc(doc(db, 'retailers', user.uid), {
+        businessName,
+        ownerName,
+        email,
+        phone,
+        address,
+        gst,
+        isApproved: false,
+        createdAt: serverTimestamp()
+      });
+
+      alert('Registration successful! Your account is pending admin approval. You will be notified once approved.');
+      await signOut(auth);
+      showLoginForm();
+    } catch (error) {
+      alert('Registration failed: ' + error.message);
+    }
+  }
+
+  async function logout() {
+    await signOut(auth);
+    currentUser = null;
+    currentRetailer = null;
+    cart = [];
+    updateCartDisplay();
+    showLoginPage();
+  }
+
+  // Load retailer data
+  async function loadRetailerData() {
+    if (!currentUser) return;
+    
+    const retailerDoc = await getDoc(doc(db, 'retailers', currentUser.uid));
+    if (retailerDoc.exists()) {
+      currentRetailer = retailerDoc.data();
+      document.getElementById('userName').textContent = currentRetailer.businessName;
+    }
+  }
+
+  // Product functions
+  function loadProducts() {
+    const grid = document.getElementById('productsGrid');
+    grid.innerHTML = '';
+
+    products.forEach(product => {
+      const productCard = createProductCard(product);
+      grid.appendChild(productCard);
+    });
+  }
+
+  function createProductCard(product) {
+    const col = document.createElement('div');
+    col.className = 'col-md-4 col-lg-3';
+    
+    col.innerHTML = `
+      <div class="card product-card h-100">
+        <img src="${product.image}" class="product-image" alt="${product.name}">
+        <div class="card-body d-flex flex-column">
+          <h6 class="card-title">${product.name}</h6>
+          <p class="card-text text-muted small">${product.description}</p>
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="badge bg-secondary">${product.size}</span>
+            <span class="badge bg-primary">${product.category}</span>
+          </div>
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="text-primary mb-0">₹${product.price}</h5>
+            <small class="text-muted">Stock: ${product.stockQuantity}</small>
+          </div>
+          <div class="mt-auto">
+            <div class="input-group mb-2">
+              <button class="btn btn-outline-secondary" onclick="changeQuantity('${product.id}', -1)">-</button>
+              <input type="number" id="qty-${product.id}" class="form-control text-center" value="1" min="1" max="${product.stockQuantity}">
+              <button class="btn btn-outline-secondary" onclick="changeQuantity('${product.id}', 1)">+</button>
+            </div>
+            <button class="btn btn-primary w-100" onclick="addToCart('${product.id}')" ${!product.inStock ? 'disabled' : ''}>
+              <i class="bi bi-cart-plus"></i> ${product.inStock ? 'Add to Cart' : 'Out of Stock'}
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    return col;
+  }
+
+  function changeQuantity(productId, change) {
+    const input = document.getElementById(`qty-${productId}`);
+    const currentValue = parseInt(input.value);
+    const newValue = Math.max(1, Math.min(currentValue + change, parseInt(input.max)));
+    input.value = newValue;
+  }
+
+  function filterProducts() {
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+    const categoryFilter = document.getElementById('categoryFilter').value;
+    const sortFilter = document.getElementById('sortFilter').value;
+
+    let filteredProducts = products.filter(product => {
+      const matchesSearch = product.name.toLowerCase().includes(searchTerm) ||
+                           product.description.toLowerCase().includes(searchTerm);
+      const matchesCategory = !categoryFilter || product.category === categoryFilter;
+      return matchesSearch && matchesCategory && product.inStock;
+    });
+
+    // Sort products
+    switch (sortFilter) {
+      case 'price-low':
+        filteredProducts.sort((a, b) => a.price - b.price);
+        break;
+      case 'price-high':
+        filteredProducts.sort((a, b) => b.price - a.price);
+        break;
+      default:
+        filteredProducts.sort((a, b) => a.name.localeCompare(b.name));
+    }
+
+    const grid = document.getElementById('productsGrid');
+    grid.innerHTML = '';
+
+    filteredProducts.forEach(product => {
+      const productCard = createProductCard(product);
+      grid.appendChild(productCard);
+    });
+  }
+
+  // Cart functions
+  function addToCart(productId) {
+    const product = products.find(p => p.id === productId);
+    const quantity = parseInt(document.getElementById(`qty-${productId}`).value);
+
+    if (!product || quantity <= 0) return;
+
+    const existingItem = cart.find(item => item.id === productId);
+    if (existingItem) {
+      existingItem.quantity += quantity;
+    } else {
+      cart.push({
+        id: product.id,
+        name: product.name,
+        size: product.size,
+        price: product.price,
+        image: product.image,
+        quantity: quantity
+      });
+    }
+
+    updateCartDisplay();
+    
+    // Show cart badge animation
+    const badge = document.getElementById('cartBadge');
+    badge.classList.add('cart-badge');
+    setTimeout(() => badge.classList.remove('cart-badge'), 500);
+  }
+
+  function removeFromCart(productId) {
+    cart = cart.filter(item => item.id !== productId);
+    updateCartDisplay();
+  }
+
+  function updateCartQuantity(productId, quantity) {
+    const item = cart.find(item => item.id === productId);
+    if (item) {
+      if (quantity <= 0) {
+        removeFromCart(productId);
+      } else {
+        item.quantity = quantity;
+        updateCartDisplay();
+      }
+    }
+  }
+
+  function clearCart() {
+    cart = [];
+    updateCartDisplay();
+  }
+
+  function updateCartDisplay() {
+    const cartItems = document.getElementById('cartItems');
+    const cartBadge = document.getElementById('cartBadge');
+    
+    // Update badge
+    const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+    cartBadge.textContent = totalItems;
+
+    // Update cart items
+    if (cart.length === 0) {
+      cartItems.innerHTML = `
+        <div class="text-center py-4">
+          <i class="bi bi-cart-x" style="font-size: 3rem; color: #ccc;"></i>
+          <p class="text-muted mt-2">Your cart is empty</p>
+        </div>
+      `;
+    } else {
+      cartItems.innerHTML = cart.map(item => `
+        <div class="d-flex align-items-center mb-3 p-2 border rounded">
+          <img src="${item.image}" alt="${item.name}" style="width: 50px; height: 50px; object-fit: cover;" class="rounded me-3">
+          <div class="flex-grow-1">
+            <h6 class="mb-1">${item.name}</h6>
+            <small class="text-muted">${item.size}</small>
+            <div class="d-flex align-items-center mt-1">
+              <button class="btn btn-sm btn-outline-secondary" onclick="updateCartQuantity('${item.id}', ${item.quantity - 1})">-</button>
+              <span class="mx-2">${item.quantity}</span>
+              <button class="btn btn-sm btn-outline-secondary" onclick="updateCartQuantity('${item.id}', ${item.quantity + 1})">+</button>
+              <button class="btn btn-sm btn-outline-danger ms-2" onclick="removeFromCart('${item.id}')">
+                <i class="bi bi-trash"></i>
+              </button>
+            </div>
+          </div>
+          <div class="text-end">
+            <div class="fw-bold">₹${(item.price * item.quantity).toFixed(2)}</div>
+            <small class="text-muted">₹${item.price} each</small>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    updateCartTotal();
+  }
+
+  function updateCartTotal() {
+    const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const includeGST = document.getElementById('includeGST').checked;
+    const gstAmount = includeGST ? subtotal * 0.18 : 0;
+    const total = subtotal + gstAmount;
+
+    document.getElementById('cartSubtotal').textContent = `₹${subtotal.toFixed(2)}`;
+    document.getElementById('cartGST').textContent = `₹${gstAmount.toFixed(2)}`;
+    document.getElementById('cartTotal').textContent = `₹${total.toFixed(2)}`;
+
+    // Enable/disable checkout button
+    document.getElementById('checkoutBtn').disabled = cart.length === 0;
+  }
+
+  function showCart() {
+    document.querySelector('.cart-overlay').classList.add('show');
+    document.getElementById('cartSidebar').classList.add('show');
+  }
+
+  function hideCart() {
+    document.querySelector('.cart-overlay').classList.remove('show');
+    document.getElementById('cartSidebar').classList.remove('show');
+  }
+
+  // Checkout function
+  async function proceedToCheckout() {
+    if (cart.length === 0) return;
+
+    const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const includeGST = document.getElementById('includeGST').checked;
+    const gstAmount = includeGST ? subtotal * 0.18 : 0;
+    const total = subtotal + gstAmount;
+
+    const orderData = {
+      retailerId: currentUser.uid,
+      retailerName: currentRetailer.businessName,
+      retailerEmail: currentRetailer.email,
+      retailerPhone: currentRetailer.phone,
+      retailerAddress: currentRetailer.address,
+      items: cart.map(item => ({
+        id: item.id,
+        name: item.name,
+        size: item.size,
+        price: item.price,
+        quantity: item.quantity,
+        image: item.image
+      })),
+      subtotal,
+      gstAmount,
+      total,
+      includeGST,
+      status: 'pending',
+      createdAt: serverTimestamp(),
+      invoiceNumber: `INV-${Date.now()}`
+    };
+
+    try {
+      await addDoc(collection(db, 'retailerOrders'), orderData);
+      
+      alert(`Order placed successfully!\nOrder ID: ${orderData.invoiceNumber}\nTotal: ₹${total.toFixed(2)}\n\nYour order is pending admin confirmation.`);
+      
+      clearCart();
+      hideCart();
+      loadOrders();
+      
+      // Switch to orders tab
+      const ordersTab = new bootstrap.Tab(document.querySelector('[href="#ordersTab"]'));
+      ordersTab.show();
+      
+    } catch (error) {
+      console.error('Error placing order:', error);
+      alert('Failed to place order. Please try again.');
+    }
+  }
+
+  // Load orders
+  async function loadOrders() {
+    if (!currentUser) return;
+
+    try {
+      const q = query(
+        collection(db, 'retailerOrders'),
+        where('retailerId', '==', currentUser.uid),
+        orderBy('createdAt', 'desc')
+      );
+
+      const querySnapshot = await getDocs(q);
+      const ordersList = document.getElementById('ordersList');
+
+      if (querySnapshot.empty) {
+        ordersList.innerHTML = `
+          <div class="text-center py-5">
+            <i class="bi bi-bag-x" style="font-size: 3rem; color: #ccc;"></i>
+            <h5 class="mt-3">No orders yet</h5>
+            <p class="text-muted">Your orders will appear here once you place them.</p>
+          </div>
+        `;
+        return;
+      }
+
+      ordersList.innerHTML = '';
+      querySnapshot.forEach(doc => {
+        const order = doc.data();
+        const orderCard = createOrderCard(order);
+        ordersList.appendChild(orderCard);
+      });
+
+    } catch (error) {
+      console.error('Error loading orders:', error);
+    }
+  }
+
+  function createOrderCard(order) {
+    const div = document.createElement('div');
+    div.className = 'card mb-3';
+    
+    const statusClass = `order-status-${order.status}`;
+    const statusText = order.status.charAt(0).toUpperCase() + order.status.slice(1);
+    
+    div.innerHTML = `
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h6 class="mb-0">Order #${order.invoiceNumber}</h6>
+        <span class="badge ${statusClass}">${statusText}</span>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-8">
+            <p class="mb-2"><strong>Date:</strong> ${order.createdAt ? new Date(order.createdAt.toDate()).toLocaleDateString() : 'N/A'}</p>
+            <p class="mb-2"><strong>Items:</strong> ${order.items.length} products (${order.items.reduce((sum, item) => sum + item.quantity, 0)} total quantity)</p>
+            <div class="mb-2">
+              <strong>Products:</strong>
+              <ul class="list-unstyled ms-3">
+                ${order.items.map(item => `
+                  <li class="small">• ${item.name} (${item.size}) × ${item.quantity} = ₹${(item.price * item.quantity).toFixed(2)}</li>
+                `).join('')}
+              </ul>
+            </div>
+          </div>
+          <div class="col-md-4 text-end">
+            <p class="mb-1">Subtotal: ₹${order.subtotal.toFixed(2)}</p>
+            ${order.includeGST ? `<p class="mb-1">GST (18%): ₹${order.gstAmount.toFixed(2)}</p>` : ''}
+            <h5 class="text-primary">Total: ₹${order.total.toFixed(2)}</h5>
+            ${(order.status === 'confirmed' || order.status === 'delivered') ? 
+              `<button class="btn btn-sm btn-outline-primary mt-2" onclick="printInvoice('${order.invoiceNumber}', ${JSON.stringify(order).replace(/"/g, '&quot;')})">
+                <i class="bi bi-printer"></i> Print Invoice
+              </button>` : ''
+            }
+          </div>
+        </div>
+      </div>
+    `;
+    
+    return div;
+  }
+
+  // Print invoice
+  function printInvoice(invoiceNumber, orderData) {
+    const order = typeof orderData === 'string' ? JSON.parse(orderData) : orderData;
+    
+    const printWindow = window.open('', '', 'width=800,height=600');
+    const invoiceHTML = `
+      <html>
+        <head>
+          <title>Invoice - ${invoiceNumber}</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 20px; }
+            .header { text-align: center; margin-bottom: 30px; }
+            .company-name { font-size: 24px; font-weight: bold; color: #2c3e50; }
+            .invoice-details { margin-bottom: 20px; }
+            .customer-details { margin-bottom: 20px; }
+            table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+            th { background-color: #f2f2f2; }
+            .total-section { text-align: right; margin-top: 20px; }
+            .total-row { font-weight: bold; font-size: 18px; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div class="company-name">Campa Beverages Pvt. Ltd.</div>
+            <p>Premium Quality Beverages</p>
+          </div>
+          
+          <div class="invoice-details">
+            <h3>Invoice Details</h3>
+            <p><strong>Invoice Number:</strong> ${invoiceNumber}</p>
+            <p><strong>Order Date:</strong> ${order.createdAt ? new Date(order.createdAt.toDate()).toLocaleDateString() : 'N/A'}</p>
+            <p><strong>Status:</strong> ${order.status.toUpperCase()}</p>
+          </div>
+          
+          <div class="customer-details">
+            <h3>Customer Details</h3>
+            <p><strong>Business Name:</strong> ${order.retailerName}</p>
+            <p><strong>Email:</strong> ${order.retailerEmail}</p>
+            <p><strong>Phone:</strong> ${order.retailerPhone}</p>
+            <p><strong>Address:</strong> ${order.retailerAddress}</p>
+          </div>
+          
+          <table>
+            <thead>
+              <tr>
+                <th>Product</th>
+                <th>Size</th>
+                <th>Quantity</th>
+                <th>Rate (₹)</th>
+                <th>Amount (₹)</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${order.items.map(item => `
+                <tr>
+                  <td>${item.name}</td>
+                  <td>${item.size}</td>
+                  <td>${item.quantity}</td>
+                  <td>${item.price.toFixed(2)}</td>
+                  <td>${(item.price * item.quantity).toFixed(2)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+          
+          <div class="total-section">
+            <p>Subtotal: ₹${order.subtotal.toFixed(2)}</p>
+            ${order.includeGST ? `<p>GST (18%): ₹${order.gstAmount.toFixed(2)}</p>` : ''}
+            <p class="total-row">Total: ₹${order.total.toFixed(2)}</p>
+          </div>
+          
+          <div style="margin-top: 40px; text-align: center; font-size: 12px; color: #666;">
+            <p>Thank you for your business!</p>
+            <p>This is a computer generated invoice.</p>
+          </div>
+        </body>
+      </html>
+    `;
+    
+    printWindow.document.write(invoiceHTML);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+      printWindow.close();
+    }, 500);
+  }
+
+  // Load and update profile
+  function loadProfile() {
+    if (!currentRetailer) return;
+
+    document.getElementById('profileBusinessName').value = currentRetailer.businessName || '';
+    document.getElementById('profileOwnerName').value = currentRetailer.ownerName || '';
+    document.getElementById('profileEmail').value = currentRetailer.email || '';
+    document.getElementById('profilePhone').value = currentRetailer.phone || '';
+    document.getElementById('profileAddress').value = currentRetailer.address || '';
+    document.getElementById('profileGST').value = currentRetailer.gst || '';
+  }
+
+  async function updateProfile(event) {
+    event.preventDefault();
+    
+    const updatedData = {
+      businessName: document.getElementById('profileBusinessName').value,
+      ownerName: document.getElementById('profileOwnerName').value,
+      phone: document.getElementById('profilePhone').value,
+      address: document.getElementById('profileAddress').value,
+      gst: document.getElementById('profileGST').value
+    };
+
+    try {
+      await updateDoc(doc(db, 'retailers', currentUser.uid), updatedData);
+      currentRetailer = { ...currentRetailer, ...updatedData };
+      document.getElementById('userName').textContent = currentRetailer.businessName;
+      alert('Profile updated successfully!');
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      alert('Failed to update profile. Please try again.');
+    }
+  }
+
+  // Form switching functions
+  function showLoginForm() {
+    document.getElementById('loginForm').classList.remove('hidden');
+    document.getElementById('registerForm').classList.add('hidden');
+  }
+
+  function showRegisterForm() {
+    document.getElementById('loginForm').classList.add('hidden');
+    document.getElementById('registerForm').classList.remove('hidden');
+  }
+
+  // Expose functions to global scope
+  window.login = login;
+  window.register = register;
+  window.logout = logout;
+  window.showLoginForm = showLoginForm;
+  window.showRegisterForm = showRegisterForm;
+  window.addToCart = addToCart;
+  window.removeFromCart = removeFromCart;
+  window.updateCartQuantity = updateCartQuantity;
+  window.clearCart = clearCart;
+  window.changeQuantity = changeQuantity;
+  window.filterProducts = filterProducts;
+  window.showCart = showCart;
+  window.hideCart = hideCart;
+  window.proceedToCheckout = proceedToCheckout;
+  window.updateCartTotal = updateCartTotal;
+  window.updateProfile = updateProfile;
+  window.printInvoice = printInvoice;
+
+  // Initialize app when page loads
+  window.addEventListener('load', initApp);
+</script>
+</body>
+</html>
