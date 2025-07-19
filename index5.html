@@ -1,0 +1,1641 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SUPREME ENTERPRISES - Operator Portal</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    :root {
+      --primary-color: #2c3e50;
+      --secondary-color: #3498db;
+      --accent-color: #e74c3c;
+      --light-color: #f8f9fa;
+      --dark-color: #343a40;
+    }
+    
+    body { 
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      margin: 0;
+      padding: 20px;
+    }
+    
+    .operator-container {
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.1);
+      overflow: hidden;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    
+    .header-section {
+      background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+      color: white;
+      padding: 20px;
+      text-align: center;
+      position: relative;
+    }
+    
+    .company-title {
+      font-size: 2rem;
+      font-weight: 700;
+      margin-bottom: 5px;
+    }
+    
+    .company-subtitle {
+      font-size: 1rem;
+      opacity: 0.9;
+    }
+    
+    .nav-tabs {
+      background: var(--light-color);
+      border-bottom: none;
+      padding: 0 20px;
+    }
+    
+    .nav-link {
+      border: none;
+      color: var(--dark-color);
+      font-weight: 600;
+      padding: 15px 20px;
+      margin: 0 5px;
+      border-radius: 15px 15px 0 0;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .nav-link:hover {
+      background: rgba(52, 152, 219, 0.1);
+      color: var(--secondary-color);
+    }
+    
+    .nav-link.active {
+      background: white;
+      color: var(--primary-color);
+      box-shadow: 0 -5px 15px rgba(0,0,0,0.1);
+    }
+    
+    .tab-content {
+      padding: 20px;
+      min-height: 500px;
+    }
+    
+    .card {
+      border: none;
+      border-radius: 15px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+      transition: all 0.3s ease;
+    }
+    
+    .card-header {
+      background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+      color: white;
+      border: none;
+      padding: 15px 20px;
+      font-weight: 600;
+    }
+    
+    .card-body {
+      padding: 20px;
+    }
+    
+    .btn {
+      border-radius: 10px;
+      font-weight: 600;
+      padding: 10px 20px;
+      border: none;
+      transition: all 0.3s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .btn-primary { 
+      background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%); 
+    }
+    
+    .table {
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    
+    .table thead th {
+      background: var(--primary-color);
+      color: white;
+      border: none;
+    }
+    
+    .login-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    
+    .login-card {
+      background: white;
+      border-radius: 25px;
+      box-shadow: 0 30px 80px rgba(0,0,0,0.2);
+      overflow: hidden;
+      max-width: 400px;
+      width: 100%;
+    }
+    
+    .login-header {
+      background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+      color: white;
+      padding: 30px;
+      text-align: center;
+    }
+    
+    .login-body {
+      padding: 30px;
+    }
+    
+    .hidden { display: none !important; }
+    
+    .invoice-container {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      max-width: 600px;
+      margin: 20px auto;
+    }
+    
+    .dashboard-card {
+      border-radius: 15px;
+      padding: 20px;
+      color: white;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    
+    .dashboard-card .value {
+      font-size: 2.5rem;
+      font-weight: 700;
+    }
+    
+    .dashboard-card .label {
+      font-size: 1rem;
+      opacity: 0.9;
+    }
+    
+    @media (max-width: 768px) {
+      body { padding: 10px; }
+      .operator-container { border-radius: 15px; }
+      .header-section { padding: 15px; }
+      .company-title { font-size: 1.5rem; }
+      .tab-content { padding: 15px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Operator Login Page -->
+<div id="operatorLoginPage" class="login-container">
+  <div class="login-card">
+    <div class="login-header">
+      <i class="bi bi-truck" style="font-size: 2.5rem; margin-bottom: 15px;"></i>
+      <h2>SUPREME ENTERPRISES</h2>
+      <p class="mb-0">Operator Portal</p>
+    </div>
+    <div class="login-body">
+      <form onsubmit="operatorLogin(event)">
+        <div class="mb-3">
+          <label class="form-label">Email Address</label>
+          <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+            <input type="email" id="operatorEmail" class="form-control" placeholder="operator@supremeenterprises.com" required>
+          </div>
+        </div>
+        <div class="mb-4">
+          <label class="form-label">Password</label>
+          <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-lock"></i></span>
+            <input type="password" id="operatorPassword" class="form-control" placeholder="Enter password" required>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary w-100">
+          <i class="bi bi-box-arrow-in-right"></i> Login to Operator Portal
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Operator Dashboard -->
+<div id="operatorApp" class="operator-container hidden">
+  <!-- Header Section -->
+  <div class="header-section">
+    <h1 class="company-title">SUPREME ENTERPRISES</h1>
+    <p class="company-subtitle">Operator Portal - Sales & Inventory Management</p>
+    <div class="mt-3">
+      <span class="badge bg-light text-dark me-2">
+        <i class="bi bi-person-circle"></i> Welcome, <span id="operatorName"></span>
+      </span>
+      <button onclick="operatorLogout()" class="btn btn-outline-light btn-sm">
+        <i class="bi bi-box-arrow-right"></i> Logout
+      </button>
+    </div>
+  </div>
+
+  <!-- Navigation Tabs -->
+  <ul class="nav nav-tabs" id="operatorTabs">
+    <li class="nav-item">
+      <a class="nav-link active" data-bs-toggle="tab" href="#dashboardTab">
+        <i class="bi bi-speedometer2"></i> Dashboard
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" data-bs-toggle="tab" href="#stockTab">
+        <i class="bi bi-box-seam"></i> My Stock
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" data-bs-toggle="tab" href="#salesTab">
+        <i class="bi bi-cash-coin"></i> Make Sale
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" data-bs-toggle="tab" href="#historyTab">
+        <i class="bi bi-clock-history"></i> Sales History
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" data-bs-toggle="tab" href="#inventoryTab">
+        <i class="bi bi-clipboard-data"></i> Inventory
+      </a>
+    </li>
+  </ul>
+
+  <!-- Tab Content -->
+  <div class="tab-content">
+    <!-- Dashboard Tab -->
+    <div class="tab-pane fade show active" id="dashboardTab">
+      <div class="row">
+        <div class="col-md-4">
+          <div class="dashboard-card" style="background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);">
+            <div class="value" id="todaySalesValue">0</div>
+            <div class="label">Today's Sales (₹)</div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="dashboard-card" style="background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);">
+            <div class="value" id="totalStockValue">0</div>
+            <div class="label">Current Stock (Units)</div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="dashboard-card" style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);">
+            <div class="value" id="topProductValue">-</div>
+            <div class="label">Top Selling Product</div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="card">
+        <div class="card-header">
+          <i class="bi bi-bar-chart"></i> Daily Sales Performance
+        </div>
+        <div class="card-body">
+          <canvas id="salesChart" height="300"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- My Stock Tab -->
+    <div class="tab-pane fade" id="stockTab">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <div>
+            <i class="bi bi-truck"></i> Current Van Stock
+          </div>
+          <button onclick="exportStockToExcel()" class="btn btn-sm btn-light">
+            <i class="bi bi-download"></i> Export to Excel
+          </button>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Product</th>
+                  <th>Size</th>
+                  <th>Loaded</th>
+                  <th>Sold</th>
+                  <th>Remaining</th>
+                  <th>Price</th>
+                </tr>
+              </thead>
+              <tbody id="vanStockTable">
+                <tr>
+                  <td colspan="6" class="text-center">Loading van stock...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sales Tab -->
+    <div class="tab-pane fade" id="salesTab">
+      <div class="card">
+        <div class="card-header">
+          <i class="bi bi-cash-coin"></i> Create New Sale
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Select Product</label>
+                <select id="saleProduct" class="form-select" onchange="updateSalePrice()">
+                  <option value="">Select Product</option>
+                </select>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="mb-3">
+                <label class="form-label">Quantity</label>
+                <input type="number" id="saleQty" class="form-control" min="1" value="1" onchange="updateSaleTotal()">
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="mb-3">
+                <label class="form-label">Unit Price (₹)</label>
+                <input type="number" id="salePrice" class="form-control" readonly>
+              </div>
+            </div>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label">Customer Name (Optional)</label>
+            <input type="text" id="customerName" class="form-control" placeholder="Enter customer name">
+          </div>
+          
+          <div class="d-flex justify-content-between align-items-center mb-4">
+            <h5 class="mb-0">Total: ₹<span id="saleTotal">0</span></h5>
+            <button onclick="addToCart()" class="btn btn-primary">
+              <i class="bi bi-cart-plus"></i> Add to Sale
+            </button>
+          </div>
+          
+          <div class="table-responsive mb-4">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Product</th>
+                  <th>Qty</th>
+                  <th>Price</th>
+                  <th>Total</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="saleCart">
+                <tr>
+                  <td colspan="5" class="text-center">No items added yet</td>
+                </tr>
+              </tbody>
+              <tfoot>
+                <tr>
+                  <th colspan="3">Grand Total</th>
+                  <th colspan="2">₹<span id="cartTotal">0</span></th>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+          
+          <div class="d-flex justify-content-end gap-3">
+            <button onclick="clearCart()" class="btn btn-danger">
+              <i class="bi bi-trash"></i> Clear
+            </button>
+            <button onclick="completeSale()" class="btn btn-success">
+              <i class="bi bi-check-circle"></i> Complete Sale
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- History Tab -->
+    <div class="tab-pane fade" id="historyTab">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <div>
+            <i class="bi bi-clock-history"></i> Sales History
+          </div>
+          <div>
+            <input type="date" id="historyDateFilter" class="form-control" onchange="loadSalesHistory()">
+            <button onclick="exportSalesToExcel()" class="btn btn-sm btn-light mt-2">
+              <i class="bi bi-download"></i> Export to Excel
+            </button>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Invoice #</th>
+                  <th>Date</th>
+                  <th>Customer</th>
+                  <th>Items</th>
+                  <th>Total</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="salesHistoryTable">
+                <tr>
+                  <td colspan="6" class="text-center">Loading history...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Inventory Tab -->
+    <div class="tab-pane fade" id="inventoryTab">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <div>
+            <i class="bi bi-clipboard-data"></i> Inventory Management
+          </div>
+          <button onclick="exportInventoryToExcel()" class="btn btn-sm btn-light">
+            <i class="bi bi-download"></i> Export to Excel
+          </button>
+        </div>
+        <div class="card-body">
+          <div class="row mb-4">
+            <div class="col-md-4">
+              <div class="mb-3">
+                <label class="form-label">Product</label>
+                <select id="inventoryProduct" class="form-select">
+                  <option value="">Select Product</option>
+                </select>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="mb-3">
+                <label class="form-label">Action</label>
+                <select id="inventoryAction" class="form-select">
+                  <option value="add">Add Stock</option>
+                  <option value="remove">Remove Stock</option>
+                  <option value="adjust">Adjust Stock</option>
+                </select>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="mb-3">
+                <label class="form-label">Quantity</label>
+                <input type="number" id="inventoryQty" class="form-control" min="1" value="1">
+              </div>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+              <button onclick="updateInventory()" class="btn btn-primary w-100">
+                <i class="bi bi-save"></i> Update
+              </button>
+            </div>
+          </div>
+          
+          <div class="table-responsive">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Product</th>
+                  <th>Size</th>
+                  <th>Action</th>
+                  <th>Qty</th>
+                  <th>Operator</th>
+                </tr>
+              </thead>
+              <tbody id="inventoryHistoryTable">
+                <tr>
+                  <td colspan="6" class="text-center">Loading inventory history...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Invoice Modal -->
+<div class="modal fade" id="invoiceModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Invoice</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" id="invoiceContent">
+        <!-- Invoice content will be inserted here -->
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary" onclick="printInvoice()">
+          <i class="bi bi-printer"></i> Print
+        </button>
+        <button type="button" class="btn btn-success" onclick="exportCurrentInvoice()">
+          <i class="bi bi-file-earmark-excel"></i> Export to Excel
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- Firebase SDK -->
+<script type="module">
+  // Import Firebase modules
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+  import { 
+    getAuth, 
+    signInWithEmailAndPassword, 
+    signOut,
+    onAuthStateChanged 
+  } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+  import { 
+    getFirestore,
+    collection,
+    doc,
+    setDoc,
+    getDoc,
+    addDoc,
+    updateDoc,
+    query,
+    where,
+    orderBy,
+    limit,
+    getDocs,
+    serverTimestamp
+  } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+
+  // Firebase configuration
+  const firebaseConfig = {
+    apiKey: "AIzaSyBm2Y2-KaPh_9prtDyEh75ys9bOS_YivyU",
+    authDomain: "campacola-45a6c.firebaseapp.com",
+    projectId: "campacola-45a6c",
+    storageBucket: "campacola-45a6c.appspot.com",
+    messagingSenderId: "950062364838",
+    appId: "1:950062364838:web:c016c1c2b63d661dc09c67",
+    measurementId: "G-0F1FMP4D6X"
+  };
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+
+  // Global variables
+  let currentOperator = null;
+  let operatorId = null;
+  let saleCart = [];
+  let invoiceModal = null;
+  let salesChart = null;
+  let currentInvoiceData = null;
+
+  // Product list with prices
+  const products = [
+    { name: 'Campa Cola', size: '200ml', price: 220 },
+    { name: 'Power Up', size: '200ml', price: 220 },
+    { name: 'Orange', size: '200ml', price: 220 },
+    { name: 'Campa Soda', size: '500ml', price: 260 },
+    { name: 'Campa Cola', size: '500ml', price: 360 },
+    { name: 'Orange', size: '500ml', price: 360 },
+    { name: 'Gold Boost Tin', size: 'Can', price: 580 },
+    { name: 'Berry Kick', size: '200ml', price: 220 },
+    { name: 'Lemon', size: '200ml', price: 220 },
+    { name: 'Raskik Tetra Mango', size: '125ml', price: 280 },
+    { name: 'Raskik Mango', size: '150ml', price: 220 },
+    { name: 'Raskik Nimbu Pani', size: '150ml', price: 220 },
+    { name: 'Raskik Apple Drink', size: '150ml', price: 220 },
+    { name: 'Raskik Mixed Fruit', size: '150ml', price: 220 },
+    { name: 'Raskik Glucose', size: '150ml', price: 220 },
+    { name: 'Spinner Lemon', size: '150ml', price: 220 },
+    { name: 'Spinner Orange', size: '150ml', price: 220 },
+    { name: 'Spinner Nitro', size: '150ml', price: 220 },
+    { name: 'Independence Water', size: '750ml', price: 150 }
+  ];
+
+  // Initialize app
+  function initOperatorApp() {
+    // Initialize modal
+    invoiceModal = new bootstrap.Modal(document.getElementById('invoiceModal'));
+    
+    // Check authentication
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        if (isAdmin(user.email)) {
+          // Redirect admins to admin portal
+          window.location.href = 'admin.html';
+        } else {
+          currentOperator = user;
+          operatorId = user.uid;
+          showOperatorApp();
+          loadOperatorData();
+        }
+      } else {
+        showOperatorLogin();
+      }
+    });
+
+    // Initialize product dropdowns
+    initializeProductDropdowns();
+  }
+
+  function isAdmin(email) {
+    return email === 'supremeenterprise79@gmail.com' || email === 'admin@gantasolutions.com';
+  }
+
+  function showOperatorLogin() {
+    document.getElementById('operatorLoginPage').classList.remove('hidden');
+    document.getElementById('operatorApp').classList.add('hidden');
+  }
+
+  function showOperatorApp() {
+    document.getElementById('operatorLoginPage').classList.add('hidden');
+    document.getElementById('operatorApp').classList.remove('hidden');
+    document.getElementById('operatorName').textContent = currentOperator.email.split('@')[0];
+  }
+
+  function initializeProductDropdowns() {
+    // Sale product dropdown
+    const saleDropdown = document.getElementById('saleProduct');
+    saleDropdown.innerHTML = '<option value="">Select Product</option>';
+    
+    // Inventory product dropdown
+    const inventoryDropdown = document.getElementById('inventoryProduct');
+    inventoryDropdown.innerHTML = '<option value="">Select Product</option>';
+    
+    products.forEach((product, index) => {
+      // For sales
+      const saleOption = document.createElement('option');
+      saleOption.value = index;
+      saleOption.textContent = `${product.name} - ${product.size}`;
+      saleOption.setAttribute('data-price', product.price);
+      saleDropdown.appendChild(saleOption);
+      
+      // For inventory
+      const inventoryOption = document.createElement('option');
+      inventoryOption.value = index;
+      inventoryOption.textContent = `${product.name} - ${product.size}`;
+      inventoryDropdown.appendChild(inventoryOption);
+    });
+  }
+
+  // Authentication functions
+  async function operatorLogin(event) {
+    event.preventDefault();
+    const email = document.getElementById('operatorEmail').value;
+    const password = document.getElementById('operatorPassword').value;
+
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      if (isAdmin(userCredential.user.email)) {
+        // Redirect admins to admin portal
+        window.location.href = 'admin.html';
+        return;
+      }
+      currentOperator = userCredential.user;
+      operatorId = userCredential.user.uid;
+      showOperatorApp();
+      loadOperatorData();
+    } catch (error) {
+      alert('Login failed: ' + error.message);
+    }
+  }
+
+  async function operatorLogout() {
+    try {
+      await signOut(auth);
+      currentOperator = null;
+      operatorId = null;
+      showOperatorLogin();
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  }
+
+  // Operator data functions
+  async function loadOperatorData() {
+    try {
+      await loadDashboardData();
+      await loadVanStock();
+      await loadSalesHistory();
+      await loadInventoryHistory();
+    } catch (error) {
+      console.error('Error loading operator data:', error);
+    }
+  }
+
+  async function loadDashboardData() {
+    try {
+      // Today's sales
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const salesQuery = query(
+        collection(db, 'sales'),
+        where('operatorId', '==', operatorId),
+        where('timestamp', '>=', today),
+        orderBy('timestamp', 'desc')
+      );
+      
+      const salesSnapshot = await getDocs(salesQuery);
+      let todaySales = 0;
+      salesSnapshot.forEach(doc => {
+        todaySales += doc.data().total;
+      });
+      document.getElementById('todaySalesValue').textContent = todaySales.toFixed(2);
+      
+      // Total stock
+      const vanStockRef = doc(db, 'vanStock', operatorId);
+      const vanStockSnap = await getDoc(vanStockRef);
+      let totalStock = 0;
+      
+      if (vanStockSnap.exists() && vanStockSnap.data().stock) {
+        const vanStockData = vanStockSnap.data().stock;
+        for (const [key, stock] of Object.entries(vanStockData)) {
+          totalStock += stock.remaining || 0;
+        }
+      }
+      document.getElementById('totalStockValue').textContent = totalStock;
+      
+      // Top selling product (last 7 days)
+      const weekAgo = new Date();
+      weekAgo.setDate(weekAgo.getDate() - 7);
+      
+      const weekSalesQuery = query(
+        collection(db, 'sales'),
+        where('operatorId', '==', operatorId),
+        where('timestamp', '>=', weekAgo),
+        orderBy('timestamp', 'desc')
+      );
+      
+      const weekSalesSnapshot = await getDocs(weekSalesQuery);
+      const productSales = {};
+      
+      weekSalesSnapshot.forEach(doc => {
+        const sale = doc.data();
+        sale.items.forEach(item => {
+          const key = `${item.name}|${item.size}`;
+          productSales[key] = (productSales[key] || 0) + item.quantity;
+        });
+      });
+      
+      let topProduct = "-";
+      let maxSales = 0;
+      for (const [key, qty] of Object.entries(productSales)) {
+        if (qty > maxSales) {
+          maxSales = qty;
+          topProduct = key.replace('|', ' - ');
+        }
+      }
+      
+      document.getElementById('topProductValue').textContent = topProduct;
+      
+      // Sales chart data (last 7 days)
+      const salesByDay = {};
+      for (let i = 6; i >= 0; i--) {
+        const date = new Date();
+        date.setDate(date.getDate() - i);
+        const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        salesByDay[dateStr] = 0;
+      }
+      
+      weekSalesSnapshot.forEach(doc => {
+        const sale = doc.data();
+        const saleDate = sale.timestamp?.toDate() || new Date();
+        const dateStr = saleDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        if (salesByDay.hasOwnProperty(dateStr)) {
+          salesByDay[dateStr] += sale.total;
+        }
+      });
+      
+      // Initialize or update chart
+      const ctx = document.getElementById('salesChart').getContext('2d');
+      if (salesChart) {
+        salesChart.data.labels = Object.keys(salesByDay);
+        salesChart.data.datasets[0].data = Object.values(salesByDay);
+        salesChart.update();
+      } else {
+        salesChart = new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: Object.keys(salesByDay),
+            datasets: [{
+              label: 'Daily Sales (₹)',
+              data: Object.values(salesByDay),
+              backgroundColor: 'rgba(52, 152, 219, 0.7)',
+              borderColor: 'rgba(52, 152, 219, 1)',
+              borderWidth: 1
+            }]
+          },
+          options: {
+            responsive: true,
+            scales: {
+              y: {
+                beginAtZero: true
+              }
+            }
+          }
+        });
+      }
+      
+    } catch (error) {
+      console.error('Error loading dashboard data:', error);
+    }
+  }
+
+  async function loadVanStock() {
+    try {
+      const tbody = document.getElementById('vanStockTable');
+      
+      const vanStockRef = doc(db, 'vanStock', operatorId);
+      const vanStockSnap = await getDoc(vanStockRef);
+      
+      let html = '';
+      
+      if (vanStockSnap.exists() && vanStockSnap.data().stock) {
+        const vanStockData = vanStockSnap.data().stock;
+        
+        for (const [key, stock] of Object.entries(vanStockData)) {
+          const product = products.find(p => 
+            p.name === stock.name && p.size === stock.size);
+          const price = product ? product.price : 0;
+          
+          html += `
+            <tr>
+              <td>${stock.name}</td>
+              <td>${stock.size}</td>
+              <td>${stock.loaded || 0}</td>
+              <td>${stock.sold || 0}</td>
+              <td>${stock.remaining || 0}</td>
+              <td>₹${price}</td>
+            </tr>
+          `;
+        }
+      }
+      
+      tbody.innerHTML = html || '<tr><td colspan="6" class="text-center">No stock loaded yet</td></tr>';
+      
+    } catch (error) {
+      console.error('Error loading van stock:', error);
+      document.getElementById('vanStockTable').innerHTML = 
+        '<tr><td colspan="6" class="text-center text-danger">Error loading stock</td></tr>';
+    }
+  }
+
+  // Sales functions
+  function updateSalePrice() {
+    const productSelect = document.getElementById('saleProduct');
+    const priceInput = document.getElementById('salePrice');
+    const selectedIndex = productSelect.value;
+    
+    if (selectedIndex && selectedIndex !== "") {
+      const product = products[selectedIndex];
+      priceInput.value = product.price;
+      updateSaleTotal();
+    } else {
+      priceInput.value = "";
+      document.getElementById('saleTotal').textContent = "0";
+    }
+  }
+
+  function updateSaleTotal() {
+    const qty = parseInt(document.getElementById('saleQty').value) || 0;
+    const price = parseFloat(document.getElementById('salePrice').value) || 0;
+    document.getElementById('saleTotal').textContent = (qty * price).toFixed(2);
+  }
+
+  function addToCart() {
+    const productSelect = document.getElementById('saleProduct');
+    const qtyInput = document.getElementById('saleQty');
+    const selectedIndex = productSelect.value;
+    
+    if (!selectedIndex || selectedIndex === "") {
+      alert("Please select a product");
+      return;
+    }
+    
+    const qty = parseInt(qtyInput.value) || 0;
+    if (qty <= 0) {
+      alert("Please enter a valid quantity");
+      return;
+    }
+    
+    const product = products[selectedIndex];
+    const existingItem = saleCart.find(item => item.productIndex === selectedIndex);
+    
+    if (existingItem) {
+      existingItem.quantity += qty;
+      existingItem.total = existingItem.quantity * product.price;
+    } else {
+      saleCart.push({
+        productIndex: selectedIndex,
+        name: product.name,
+        size: product.size,
+        price: product.price,
+        quantity: qty,
+        total: qty * product.price
+      });
+    }
+    
+    updateCartDisplay();
+    productSelect.value = "";
+    document.getElementById('salePrice').value = "";
+    document.getElementById('saleQty').value = "1";
+    document.getElementById('saleTotal').textContent = "0";
+  }
+
+  function updateCartDisplay() {
+    const tbody = document.getElementById('saleCart');
+    let html = '';
+    let grandTotal = 0;
+    
+    saleCart.forEach((item, index) => {
+      grandTotal += item.total;
+      html += `
+        <tr>
+          <td>${item.name} (${item.size})</td>
+          <td>${item.quantity}</td>
+          <td>₹${item.price.toFixed(2)}</td>
+          <td>₹${item.total.toFixed(2)}</td>
+          <td>
+            <button onclick="removeFromCart(${index})" class="btn btn-sm btn-danger">
+              <i class="bi bi-trash"></i>
+            </button>
+          </td>
+        </tr>
+      `;
+    });
+    
+    tbody.innerHTML = html || '<tr><td colspan="5" class="text-center">No items added yet</td></tr>';
+    document.getElementById('cartTotal').textContent = grandTotal.toFixed(2);
+  }
+
+  function removeFromCart(index) {
+    saleCart.splice(index, 1);
+    updateCartDisplay();
+  }
+
+  function clearCart() {
+    if (saleCart.length === 0) return;
+    if (!confirm("Are you sure you want to clear the sale cart?")) return;
+    
+    saleCart = [];
+    updateCartDisplay();
+  }
+
+  async function completeSale() {
+    if (saleCart.length === 0) {
+      alert("Please add items to the sale cart");
+      return;
+    }
+    
+    const customerName = document.getElementById('customerName').value || "Walk-in Customer";
+    
+    try {
+      // Create sale record
+      const saleRef = await addDoc(collection(db, 'sales'), {
+        operatorId: operatorId,
+        operatorEmail: currentOperator.email,
+        customerName: customerName,
+        items: saleCart.map(item => ({
+          name: item.name,
+          size: item.size,
+          price: item.price,
+          quantity: item.quantity
+        })),
+        total: saleCart.reduce((sum, item) => sum + item.total, 0),
+        timestamp: serverTimestamp()
+      });
+      
+      // Update van stock for each item
+      const vanStockRef = doc(db, 'vanStock', operatorId);
+      const vanStockSnap = await getDoc(vanStockRef);
+      const vanStockData = vanStockSnap.exists() ? vanStockSnap.data().stock || {} : {};
+      
+      for (const item of saleCart) {
+        const productKey = `${item.name}|${item.size}`;
+        
+        if (vanStockData[productKey]) {
+          vanStockData[productKey].sold = (vanStockData[productKey].sold || 0) + item.quantity;
+          vanStockData[productKey].remaining = (vanStockData[productKey].remaining || 0) - item.quantity;
+          
+          // Record inventory movement
+          await addDoc(collection(db, 'inventoryMovements'), {
+            operatorId: operatorId,
+            operatorEmail: currentOperator.email,
+            product: {
+              name: item.name,
+              size: item.size
+            },
+            action: 'sale',
+            quantity: item.quantity,
+            timestamp: serverTimestamp()
+          });
+        }
+      }
+      
+      // Update van stock in database
+      await updateDoc(vanStockRef, {
+        stock: vanStockData,
+        lastUpdated: serverTimestamp()
+      });
+      
+      // Generate and show invoice
+      await generateInvoice(saleRef.id, customerName);
+      
+      // Clear cart and reload data
+      saleCart = [];
+      updateCartDisplay();
+      document.getElementById('customerName').value = "";
+      loadDashboardData();
+      loadVanStock();
+      loadSalesHistory();
+      loadInventoryHistory();
+      
+    } catch (error) {
+      console.error("Error completing sale:", error);
+      alert("Error completing sale. Please try again.");
+    }
+  }
+
+  async function generateInvoice(saleId, customerName) {
+    try {
+      // Get sale details
+      const saleRef = doc(db, 'sales', saleId);
+      const saleSnap = await getDoc(saleRef);
+      
+      if (!saleSnap.exists()) {
+        throw new Error("Sale record not found");
+      }
+      
+      const saleData = saleSnap.data();
+      currentInvoiceData = saleData; // Store for Excel export
+      const invoiceDate = saleData.timestamp?.toDate() || new Date();
+      
+      // Generate invoice HTML
+      let invoiceHTML = `
+        <div class="invoice-container">
+          <div class="text-center mb-4">
+            <h2>SUPREME ENTERPRISES</h2>
+            <p class="mb-1">Operator: ${currentOperator.email.split('@')[0]}</p>
+            <p class="mb-1">Invoice #: ${saleId.substring(0, 8).toUpperCase()}</p>
+            <p>Date: ${invoiceDate.toLocaleString()}</p>
+          </div>
+          
+          <div class="mb-4">
+            <p><strong>Customer:</strong> ${customerName}</p>
+          </div>
+          
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Product</th>
+                <th>Qty</th>
+                <th>Price</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+      `;
+      
+      saleData.items.forEach(item => {
+        invoiceHTML += `
+          <tr>
+            <td>${item.name} (${item.size})</td>
+            <td>${item.quantity}</td>
+            <td>₹${item.price.toFixed(2)}</td>
+            <td>₹${(item.price * item.quantity).toFixed(2)}</td>
+          </tr>
+        `;
+      });
+      
+      invoiceHTML += `
+            </tbody>
+            <tfoot>
+              <tr>
+                <th colspan="3">Total</th>
+                <th>₹${saleData.total.toFixed(2)}</th>
+              </tr>
+            </tfoot>
+          </table>
+          
+          <div class="mt-4 pt-4 border-top text-center">
+            <p>Thank you for your business!</p>
+            <p class="text-muted">This is a computer generated invoice</p>
+          </div>
+        </div>
+      `;
+      
+      // Display invoice in modal
+      document.getElementById('invoiceContent').innerHTML = invoiceHTML;
+      invoiceModal.show();
+      
+    } catch (error) {
+      console.error("Error generating invoice:", error);
+      alert("Error generating invoice. Sale was still recorded.");
+    }
+  }
+
+  function printInvoice() {
+    const invoiceContent = document.getElementById('invoiceContent').innerHTML;
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Invoice</title>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+        <style>
+          body { padding: 20px; }
+          @media print {
+            .no-print { display: none !important; }
+          }
+        </style>
+      </head>
+      <body>
+        ${invoiceContent}
+        <div class="no-print text-center mt-3">
+          <button onclick="window.print()" class="btn btn-primary me-2">Print</button>
+          <button onclick="window.close()" class="btn btn-secondary">Close</button>
+        </div>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
+  }
+
+  async function loadSalesHistory() {
+    try {
+      const tbody = document.getElementById('salesHistoryTable');
+      const dateFilter = document.getElementById('historyDateFilter').value;
+      
+      let salesQuery = query(
+        collection(db, 'sales'),
+        where('operatorId', '==', operatorId),
+        orderBy('timestamp', 'desc'),
+        limit(50)
+      );
+      
+      if (dateFilter) {
+        const startDate = new Date(dateFilter);
+        startDate.setHours(0, 0, 0, 0);
+        const endDate = new Date(dateFilter);
+        endDate.setHours(23, 59, 59, 999);
+        
+        salesQuery = query(
+          collection(db, 'sales'),
+          where('operatorId', '==', operatorId),
+          where('timestamp', '>=', startDate),
+          where('timestamp', '<=', endDate),
+          orderBy('timestamp', 'desc')
+        );
+      }
+      
+      const salesSnapshot = await getDocs(salesQuery);
+      
+      let html = '';
+      salesSnapshot.forEach(doc => {
+        const sale = doc.data();
+        const date = sale.timestamp?.toDate() || new Date();
+        
+        html += `
+          <tr>
+            <td>${doc.id.substring(0, 8).toUpperCase()}</td>
+            <td>${date.toLocaleDateString()}</td>
+            <td>${sale.customerName}</td>
+            <td>${sale.items.length} items</td>
+            <td>₹${sale.total.toFixed(2)}</td>
+            <td>
+              <button onclick="viewInvoice('${doc.id}')" class="btn btn-sm btn-primary">
+                <i class="bi bi-receipt"></i> View
+              </button>
+            </td>
+          </tr>
+        `;
+      });
+      
+      tbody.innerHTML = html || '<tr><td colspan="6" class="text-center">No sales found</td></tr>';
+      
+    } catch (error) {
+      console.error('Error loading sales history:', error);
+      document.getElementById('salesHistoryTable').innerHTML = 
+        '<tr><td colspan="6" class="text-center text-danger">Error loading history</td></tr>';
+    }
+  }
+
+  async function viewInvoice(saleId) {
+    try {
+      const saleRef = doc(db, 'sales', saleId);
+      const saleSnap = await getDoc(saleRef);
+      
+      if (saleSnap.exists()) {
+        const saleData = saleSnap.data();
+        await generateInvoice(saleId, saleData.customerName);
+      } else {
+        alert("Invoice not found");
+      }
+    } catch (error) {
+      console.error("Error viewing invoice:", error);
+      alert("Error loading invoice");
+    }
+  }
+
+  // Inventory functions
+  async function updateInventory() {
+    const productSelect = document.getElementById('inventoryProduct');
+    const actionSelect = document.getElementById('inventoryAction');
+    const qtyInput = document.getElementById('inventoryQty');
+    
+    const selectedIndex = productSelect.value;
+    const action = actionSelect.value;
+    const qty = parseInt(qtyInput.value) || 0;
+    
+    if (!selectedIndex || selectedIndex === "") {
+      alert("Please select a product");
+      return;
+    }
+    
+    if (qty <= 0) {
+      alert("Please enter a valid quantity");
+      return;
+    }
+    
+    const product = products[selectedIndex];
+    const productKey = `${product.name}|${product.size}`;
+    
+    try {
+      const vanStockRef = doc(db, 'vanStock', operatorId);
+      const vanStockSnap = await getDoc(vanStockRef);
+      const vanStockData = vanStockSnap.exists() ? vanStockSnap.data().stock || {} : {};
+      
+      if (!vanStockData[productKey]) {
+        vanStockData[productKey] = {
+          name: product.name,
+          size: product.size,
+          loaded: 0,
+          sold: 0,
+          remaining: 0
+        };
+      }
+      
+      let actionType = '';
+      let movementQty = qty;
+      
+      switch (action) {
+        case 'add':
+          vanStockData[productKey].loaded = (vanStockData[productKey].loaded || 0) + qty;
+          vanStockData[productKey].remaining = (vanStockData[productKey].remaining || 0) + qty;
+          actionType = 'stock_added';
+          break;
+          
+        case 'remove':
+          if ((vanStockData[productKey].remaining || 0) < qty) {
+            alert("Not enough stock to remove");
+            return;
+          }
+          vanStockData[productKey].remaining = (vanStockData[productKey].remaining || 0) - qty;
+          actionType = 'stock_removed';
+          break;
+          
+        case 'adjust':
+          vanStockData[productKey].remaining = qty;
+          actionType = 'stock_adjusted';
+          movementQty = qty - (vanStockData[productKey].remaining || 0);
+          break;
+      }
+      
+      // Update van stock in database
+      await updateDoc(vanStockRef, {
+        stock: vanStockData,
+        lastUpdated: serverTimestamp()
+      });
+      
+      // Record inventory movement
+      await addDoc(collection(db, 'inventoryMovements'), {
+        operatorId: operatorId,
+        operatorEmail: currentOperator.email,
+        product: {
+          name: product.name,
+          size: product.size
+        },
+        action: actionType,
+        quantity: movementQty,
+        timestamp: serverTimestamp()
+      });
+      
+      alert("Inventory updated successfully!");
+      productSelect.value = "";
+      qtyInput.value = "1";
+      loadVanStock();
+      loadInventoryHistory();
+      loadDashboardData();
+      
+    } catch (error) {
+      console.error("Error updating inventory:", error);
+      alert("Error updating inventory");
+    }
+  }
+
+  async function loadInventoryHistory() {
+    try {
+      const tbody = document.getElementById('inventoryHistoryTable');
+      
+      const movementsQuery = query(
+        collection(db, 'inventoryMovements'),
+        where('operatorId', '==', operatorId),
+        orderBy('timestamp', 'desc'),
+        limit(50)
+      );
+      
+      const movementsSnapshot = await getDocs(movementsQuery);
+      
+      let html = '';
+      movementsSnapshot.forEach(doc => {
+        const movement = doc.data();
+        const date = movement.timestamp?.toDate() || new Date();
+        let actionText = '';
+        let actionClass = '';
+        
+        switch (movement.action) {
+          case 'sale':
+            actionText = 'Sale';
+            actionClass = 'success';
+            break;
+          case 'stock_added':
+            actionText = 'Stock Added';
+            actionClass = 'primary';
+            break;
+          case 'stock_removed':
+            actionText = 'Stock Removed';
+            actionClass = 'danger';
+            break;
+          case 'stock_adjusted':
+            actionText = 'Stock Adjusted';
+            actionClass = 'warning';
+            break;
+          default:
+            actionText = movement.action;
+            actionClass = 'secondary';
+        }
+        
+        html += `
+          <tr>
+            <td>${date.toLocaleDateString()}</td>
+            <td>${movement.product.name}</td>
+            <td>${movement.product.size}</td>
+            <td><span class="badge bg-${actionClass}">${actionText}</span></td>
+            <td>${movement.quantity}</td>
+            <td>${movement.operatorEmail.split('@')[0]}</td>
+          </tr>
+        `;
+      });
+      
+      tbody.innerHTML = html || '<tr><td colspan="6" class="text-center">No inventory movements found</td></tr>';
+      
+    } catch (error) {
+      console.error('Error loading inventory history:', error);
+      document.getElementById('inventoryHistoryTable').innerHTML = 
+        '<tr><td colspan="6" class="text-center text-danger">Error loading history</td></tr>';
+    }
+  }
+
+  // Excel Export functions
+  function exportStockToExcel() {
+    try {
+      const table = document.getElementById('vanStockTable');
+      const rows = table.querySelectorAll('tr');
+      
+      if (rows.length <= 1) {
+        alert("No stock data to export");
+        return;
+      }
+      
+      const data = [];
+      
+      // Add headers
+      const headers = [];
+      const headerCells = rows[0].querySelectorAll('th');
+      headerCells.forEach(cell => {
+        headers.push(cell.textContent);
+      });
+      data.push(headers);
+      
+      // Add data rows
+      for (let i = 1; i < rows.length; i++) {
+        const rowData = [];
+        const cells = rows[i].querySelectorAll('td');
+        
+        cells.forEach(cell => {
+          rowData.push(cell.textContent);
+        });
+        
+        data.push(rowData);
+      }
+      
+      // Create workbook
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.aoa_to_sheet(data);
+      XLSX.utils.book_append_sheet(wb, ws, "VanStock");
+      
+      // Generate file name
+      const fileName = `VanStock_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      
+      // Export
+      XLSX.writeFile(wb, fileName);
+      
+    } catch (error) {
+      console.error("Error exporting stock to Excel:", error);
+      alert("Error exporting stock data");
+    }
+  }
+
+  function exportSalesToExcel() {
+    try {
+      const table = document.getElementById('salesHistoryTable');
+      const rows = table.querySelectorAll('tr');
+      
+      if (rows.length <= 1) {
+        alert("No sales data to export");
+        return;
+      }
+      
+      const data = [];
+      
+      // Add headers
+      const headers = [];
+      const headerCells = rows[0].querySelectorAll('th');
+      headerCells.forEach(cell => {
+        headers.push(cell.textContent);
+      });
+      data.push(headers);
+      
+      // Add data rows
+      for (let i = 1; i < rows.length; i++) {
+        const rowData = [];
+        const cells = rows[i].querySelectorAll('td');
+        
+        cells.forEach(cell => {
+          rowData.push(cell.textContent);
+        });
+        
+        data.push(rowData);
+      }
+      
+      // Create workbook
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.aoa_to_sheet(data);
+      XLSX.utils.book_append_sheet(wb, ws, "SalesHistory");
+      
+      // Generate file name
+      const fileName = `SalesHistory_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      
+      // Export
+      XLSX.writeFile(wb, fileName);
+      
+    } catch (error) {
+      console.error("Error exporting sales to Excel:", error);
+      alert("Error exporting sales data");
+    }
+  }
+
+  function exportInventoryToExcel() {
+    try {
+      const table = document.getElementById('inventoryHistoryTable');
+      const rows = table.querySelectorAll('tr');
+      
+      if (rows.length <= 1) {
+        alert("No inventory data to export");
+        return;
+      }
+      
+      const data = [];
+      
+      // Add headers
+      const headers = [];
+      const headerCells = rows[0].querySelectorAll('th');
+      headerCells.forEach(cell => {
+        headers.push(cell.textContent);
+      });
+      data.push(headers);
+      
+      // Add data rows
+      for (let i = 1; i < rows.length; i++) {
+        const rowData = [];
+        const cells = rows[i].querySelectorAll('td');
+        
+        cells.forEach(cell => {
+          rowData.push(cell.textContent);
+        });
+        
+        data.push(rowData);
+      }
+      
+      // Create workbook
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.aoa_to_sheet(data);
+      XLSX.utils.book_append_sheet(wb, ws, "InventoryHistory");
+      
+      // Generate file name
+      const fileName = `InventoryHistory_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      
+      // Export
+      XLSX.writeFile(wb, fileName);
+      
+    } catch (error) {
+      console.error("Error exporting inventory to Excel:", error);
+      alert("Error exporting inventory data");
+    }
+  }
+
+  function exportCurrentInvoice() {
+    if (!currentInvoiceData) {
+      alert("No invoice data available to export");
+      return;
+    }
+    
+    try {
+      const data = [
+        ["SUPREME ENTERPRISES - INVOICE"],
+        [""],
+        ["Operator:", currentOperator.email.split('@')[0]],
+        ["Customer:", currentInvoiceData.customerName],
+        ["Date:", currentInvoiceData.timestamp?.toDate().toLocaleString() || new Date().toLocaleString()],
+        [""],
+        ["Product", "Size", "Quantity", "Unit Price", "Total"]
+      ];
+      
+      currentInvoiceData.items.forEach(item => {
+        data.push([
+          item.name,
+          item.size,
+          item.quantity,
+          item.price,
+          item.price * item.quantity
+        ]);
+      });
+      
+      data.push(
+        ["", "", "", "Total:", currentInvoiceData.total]
+      );
+      
+      // Create workbook
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.aoa_to_sheet(data);
+      XLSX.utils.book_append_sheet(wb, ws, "Invoice");
+      
+      // Generate file name
+      const fileName = `Invoice_${currentInvoiceData.timestamp?.toDate().toISOString().slice(0, 10) || new Date().toISOString().slice(0, 10)}.xlsx`;
+      
+      // Export
+      XLSX.writeFile(wb, fileName);
+      
+    } catch (error) {
+      console.error("Error exporting invoice to Excel:", error);
+      alert("Error exporting invoice data");
+    }
+  }
+
+  // Expose functions to global scope
+  window.operatorLogin = operatorLogin;
+  window.operatorLogout = operatorLogout;
+  window.updateSalePrice = updateSalePrice;
+  window.updateSaleTotal = updateSaleTotal;
+  window.addToCart = addToCart;
+  window.removeFromCart = removeFromCart;
+  window.clearCart = clearCart;
+  window.completeSale = completeSale;
+  window.viewInvoice = viewInvoice;
+  window.loadSalesHistory = loadSalesHistory;
+  window.printInvoice = printInvoice;
+  window.updateInventory = updateInventory;
+  window.exportCurrentInvoice = exportCurrentInvoice;
+
+  // Initialize app
+  window.addEventListener('load', initOperatorApp);
+</script>
+</body>
+</html>
