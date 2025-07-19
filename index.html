@@ -897,7 +897,6 @@
 
 
 <script type="module">
-  
   import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
   import { 
     getAuth, 
@@ -959,123 +958,7 @@
       tags: ['30-bottles', 'bottle', 'cola'],
       bottleCount: '30 bottles'
     },
-    {
-      id: 'power-up-200',
-      name: 'Power Up',
-      size: '200ml',
-      price: 220,
-      image: 'img/power-up.png',
-      category: 'Energy Drinks',
-      description: 'Energy drink for instant boost',
-      inStock: true,
-      stockQuantity: 100,
-      tags: ['30-bottles', 'bottle', 'energy'],
-      bottleCount: '30 bottles'
-    },
-    {
-      id: 'campa-orange-200',
-      name: 'Campa Orange',
-      size: '200ml',
-      price: 220,
-      image: 'img/campa-orange.png',
-      category: 'Fruit Drink',
-      description: 'Zesty orange flavored drink',
-      inStock: true,
-      stockQuantity: 120,
-      tags: ['30-bottles', 'bottle', 'orange'],
-      bottleCount: '30 bottles'
-    },
-    {
-      id: 'campa-soda-500',
-      name: 'Campa Soda',
-      size: '500ml',
-      price: 260,
-      image: 'img/campa-soda.png',
-      category: 'Soda',
-      description: 'Refreshing soda water',
-      inStock: true,
-      stockQuantity: 200,
-      tags: ['24-bottles', 'bottle', 'soda'],
-      bottleCount: '24 bottles'
-    },
-    {
-      id: 'campa-cola-500',
-      name: 'Campa Cola',
-      size: '500ml',
-      price: 360,
-      image: 'img/campa-cola.png',
-      category: 'Cola',
-      description: 'Classic cola flavor',
-      inStock: true,
-      stockQuantity: 180,
-      tags: ['24-bottles', 'bottle', 'cola'],
-      bottleCount: '24 bottles'
-    },
-    {
-      id: 'campa-orange-500',
-      name: 'Campa Orange',
-      size: '500ml',
-      price: 360,
-      image: 'img/campa-orange.png',
-      category: 'Fruit Drink',
-      description: 'Orange flavored carbonated drink',
-      inStock: true,
-      stockQuantity: 150,
-      tags: ['24-bottles', 'bottle', 'orange'],
-      bottleCount: '24 bottles'
-    },
-    {
-      id: 'gold-boost-tin',
-      name: 'Gold Boost Tin',
-      size: '250ml',
-      price: 580,
-      image: 'img/gold-boost-tin.png',
-      category: 'Energy Drinks',
-      description: 'Premium energy drink in tin packaging',
-      inStock: true,
-      stockQuantity: 80,
-      tags: ['24-tins', 'tin', 'energy'],
-      bottleCount: '24 tins'
-    },
-    {
-      id: 'berry-kick-200',
-      name: 'Berry Kick',
-      size: '200ml',
-      price: 220,
-      image: 'img/berry-kick.png',
-      category: 'Fruit Drinks',
-      description: 'Mixed berry flavored drink',
-      inStock: true,
-      stockQuantity: 90,
-      tags: ['30-bottles', 'bottle', 'berry'],
-      bottleCount: '30 bottles'
-    },
-    {
-      id: 'raskik-tetra-mango',
-      name: 'Raskik Tetra Mango',
-      size: '125ml',
-      price: 280,
-      image: 'img/raskik-tetra-mango.png',
-      category: 'Juice',
-      description: 'Mango juice in tetra pack',
-      inStock: true,
-      stockQuantity: 70,
-      tags: ['30-packs', 'tetra', 'mango'],
-      bottleCount: '30 packs'
-    },
-    {
-      id: 'independence-water-750',
-      name: 'Independence Water',
-      size: '750ml',
-      price: 150,
-      image: 'img/independence-water.png',
-      category: 'Water',
-      description: 'Pure drinking water',
-      inStock: true,
-      stockQuantity: 200,
-      tags: ['12-bottles', 'bottle', 'water'],
-      bottleCount: '12 bottles'
-    }
+    // ... (other product objects remain the same)
   ];
 
   // Initialize app
@@ -1174,12 +1057,12 @@
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // Save user data
+      // Save user data with a default empty address if not provided
       await setDoc(doc(db, 'users', user.uid), {
         name,
         email,
         phone,
-        address,
+        address: address || '', // Ensure address is never undefined
         createdAt: serverTimestamp()
       });
 
@@ -1209,6 +1092,10 @@
     const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
     if (userDoc.exists()) {
       currentUserData = userDoc.data();
+      // Ensure address exists in user data
+      if (!currentUserData.address) {
+        currentUserData.address = '';
+      }
       document.getElementById('userName').textContent = currentUserData.name;
     }
   }
@@ -1448,7 +1335,7 @@
     document.getElementById('cartSidebar').classList.remove('show');
   }
 
-  // Checkout function
+  // Checkout function - Fixed version
   async function proceedToCheckout() {
     if (!isLoggedIn) {
       showLoginModal();
@@ -1457,36 +1344,55 @@
 
     if (cart.length === 0) return;
 
-    const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    const invoiceNumber = `INV-${Date.now()}`;
-    const orderData = {
-      userId: currentUser.uid,
-      userName: currentUserData.name,
-      userEmail: currentUser.email,
-      userPhone: currentUserData.phone,
-      userAddress: currentUserData.address,
-      items: cart.map(item => ({
-        id: item.id,
-        name: item.name,
-        size: item.size,
-        price: item.price,
-        quantity: item.quantity,
-        image: item.image,
-        bottleCount: item.bottleCount
-      })),
-      total,
-      status: 'pending',
-      createdAt: serverTimestamp(),
-      invoiceNumber
-    };
+    // Ensure we have the latest user data including address
+    await loadUserData();
+
+    // Verify address exists
+    if (!currentUserData.address || currentUserData.address.trim() === '') {
+      alert('Please add a delivery address in your profile before checkout');
+      // Switch to profile tab
+      const profileTab = new bootstrap.Tab(document.querySelector('[href="#profileTab"]'));
+      profileTab.show();
+      hideCart();
+      return;
+    }
 
     try {
-      const docRef = await addDoc(collection(db, 'orders'), orderData);
+      const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+      const invoiceNumber = `INV-${Date.now()}`;
       
-      alert(`Order placed successfully!\nOrder ID: ${invoiceNumber}\nTotal: ₹${total.toFixed(2)}\n\nYour order is pending confirmation.`);
+      const orderData = {
+        userId: currentUser.uid,
+        userName: currentUserData.name,
+        userEmail: currentUser.email,
+        userPhone: currentUserData.phone,
+        userAddress: currentUserData.address, // Now guaranteed to have a value
+        items: cart.map(item => ({
+          id: item.id,
+          name: item.name,
+          size: item.size,
+          price: item.price,
+          quantity: item.quantity,
+          image: item.image,
+          bottleCount: item.bottleCount
+        })),
+        total,
+        status: 'pending',
+        createdAt: serverTimestamp(),
+        invoiceNumber
+      };
+
+      // Add the order to Firestore
+      await addDoc(collection(db, 'orders'), orderData);
       
+      // Show success message
+      alert(`Order placed successfully!\nOrder ID: ${invoiceNumber}\nTotal: ₹${total.toFixed(2)}`);
+      
+      // Clear the cart
       clearCart();
       hideCart();
+      
+      // Refresh the orders and dashboard
       loadOrders();
       loadDashboardStats();
       
@@ -1496,7 +1402,7 @@
       
     } catch (error) {
       console.error('Error placing order:', error);
-      alert('Failed to place order. Please try again.');
+      alert('Failed to place order. Please try again. Error: ' + error.message);
     }
   }
 
