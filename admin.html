@@ -840,7 +840,8 @@
   import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
   import { 
     getAuth, 
-    signInWithEmailAndPassword,
+    signInWithEmailAndPassword, 
+    createUserWithEmailAndPassword,
     signOut,
     onAuthStateChanged 
   } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
@@ -848,12 +849,15 @@
     getFirestore,
     collection,
     doc,
-    getDocs,
+    setDoc,
+    getDoc,
+    addDoc,
     updateDoc,
     query,
-    orderBy,
     where,
-    Timestamp
+    orderBy,
+    getDocs,
+    serverTimestamp
   } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
 
   // Firebase configuration
@@ -872,785 +876,911 @@
   const auth = getAuth(app);
   const db = getFirestore(app);
 
-  // Admin email whitelist
-  const adminEmails = [
-    'supremeenterprise79@gmail.com',
-    'admin@gantasolutions.com'
-  ];
-
   // Global variables
-  let currentAdmin = null;
-  let allOrders = [];
-  let filteredOrders = [];
-  let salesChart = null;
-  let statusChart = null;
-  let dailySalesChart = null;
-  let topProductsChart = null;
+  let currentUser = null;
+  let currentUserData = null;
+  let cart = [];
+  let products = [];
+  let isLoggedIn = false;
+  let isLoading = false;
+  let lastOrderId = null;
+
+  // Sample products with images
+  const sampleProducts = [
+    {
+      id: 'campa-cola-200',
+      name: 'Campa Cola',
+      size: '200ml',
+      price: 220,
+      image: 'img/campa-cola.png',
+      category: 'Cola',
+      description: 'Classic cola flavor in compact size',
+      inStock: true,
+      stockQuantity: 150,
+      tags: ['30-bottles', 'bottle', 'cola'],
+      bottleCount: '30 bottles'
+    },
+    {
+      id: 'power-up-200',
+      name: 'Power Up',
+      size: '200ml',
+      price: 220,
+      image: 'img/power-up.png',
+      category: 'Energy Drinks',
+      description: 'Energy drink for instant boost',
+      inStock: true,
+      stockQuantity: 100,
+      tags: ['bottle', 'energy', '30-bottles'],
+      bottleCount: '30 bottles'
+    },
+    // ... (other product objects remain the same)
+  ];
 
   // Initialize app
   function initApp() {
-    document.getElementById('currentDate').textContent = new Date().toLocaleDateString();
+    products = sampleProducts;
+    loadProducts();
     
-    // Check authentication state
+    // Check if user is logged in
     onAuthStateChanged(auth, async (user) => {
-      if (user && adminEmails.includes(user.email)) {
-        currentAdmin = user;
-        showAdminPanel();
-        await loadDashboardData();
+      if (user) {
+        currentUser = user;
+        isLoggedIn = true;
+        await loadUserData();
+        showUserView();
       } else {
-        showLoginScreen();
+        isLoggedIn = false;
+        showPublicView();
       }
     });
   }
 
-  // Show/Hide screens
-  function showLoginScreen() {
-    document.getElementById('loginScreen').classList.remove('hidden');
-    document.getElementById('adminPanel').classList.add('hidden');
+  // Show/Hide views
+  function showPublicView() {
+    document.getElementById('guestNav').classList.remove('hidden');
+    document.getElementById('userNav').classList.add('hidden');
+    document.getElementById('publicView').classList.remove('hidden');
+    document.getElementById('userDashboard').classList.add('hidden');
+    document.getElementById('floatingCartBtn').classList.add('hidden');
+    loadProducts();
   }
 
-  function showAdminPanel() {
-    document.getElementById('loginScreen').classList.add('hidden');
-    document.getElementById('adminPanel').classList.remove('hidden');
-    document.getElementById('adminNav').classList.remove('hidden');
-    document.getElementById('adminEmail').textContent = currentAdmin.email;
-    showSection('dashboard');
+  function showUserView() {
+    document.getElementById('guestNav').classList.add('hidden');
+    document.getElementById('userNav').classList.remove('hidden');
+    document.getElementById('publicView').classList.remove('hidden');
+    document.getElementById('userDashboard').classList.remove('hidden');
+    document.getElementById('floatingCartBtn').classList.remove('hidden');
+    loadProducts();
+    loadOrders();
+    loadProfile();
+    loadDashboardStats();
   }
 
-  // Admin authentication
-  async function adminLogin(event) {
+  // Loading utilities
+  function showLoading() {
+    isLoading = true;
+    document.getElementById('loadingSpinner').classList.remove('hidden');
+  }
+
+  function hideLoading() {
+    isLoading = false;
+    document.getElementById('loadingSpinner').classList.add('hidden');
+  }
+
+  function showSuccess(message) {
+    const element = document.getElementById('successMessage');
+    document.getElementById('successMessageText').textContent = message;
+    element.classList.add('show');
+    
+    setTimeout(() => {
+      element.classList.remove('show');
+    }, 3000);
+  }
+
+  function showError(message) {
+    showSuccess(message); // Reusing the same UI for errors
+  }
+
+  // Authentication functions
+  function showLoginModal() {
+    document.getElementById('loginOverlay').classList.add('show');
+  }
+
+  function hideLoginModal() {
+    document.getElementById('loginOverlay').classList.remove('show');
+  }
+
+  function showLoginForm() {
+    document.getElementById('loginForm').classList.remove('hidden');
+    document.getElementById('registerForm').classList.add('hidden');
+  }
+
+  function showRegisterForm() {
+    document.getElementById('loginForm').classList.add('hidden');
+    document.getElementById('registerForm').classList.remove('hidden');
+  }
+
+  async function login(event) {
     event.preventDefault();
-    const email = document.getElementById('adminEmail').value;
-    const password = document.getElementById('adminPassword').value;
+    
+    if (isLoading) return;
+    showLoading();
+    
+    const email = document.getElementById('loginEmail').value;
+    const password = document.getElementById('loginPassword').value;
 
-    if (!adminEmails.includes(email)) {
-      alert('Access denied. You are not authorized to access the admin panel.');
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      currentUser = userCredential.user;
+      await loadUserData();
+      isLoggedIn = true;
+      
+      hideLoginModal();
+      showUserView();
+      showSuccess('Login successful! Welcome back');
+      
+    } catch (error) {
+      showError('Login failed: ' + error.message);
+    } finally {
+      hideLoading();
+    }
+  }
+
+  async function register(event) {
+    event.preventDefault();
+    
+    if (isLoading) return;
+    showLoading();
+    
+    const name = document.getElementById('regName').value;
+    const email = document.getElementById('regEmail').value;
+    const phone = document.getElementById('regPhone').value;
+    const address = document.getElementById('regAddress').value;
+    const password = document.getElementById('regPassword').value;
+    const confirmPassword = document.getElementById('regConfirmPassword').value;
+
+    if (password !== confirmPassword) {
+      hideLoading();
+      showError('Passwords do not match');
       return;
     }
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-    } catch (error) {
-      alert('Login failed: ' + error.message);
-    }
-  }
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
 
-  async function adminLogout() {
-    try {
-      await signOut(auth);
-      currentAdmin = null;
-      showLoginScreen();
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
-  }
-
-  // Navigation
-  function showSection(sectionName) {
-    // Hide all sections
-    document.querySelectorAll('.content-section').forEach(section => {
-      section.classList.add('hidden');
-    });
-    
-    // Remove active class from all nav links
-    document.querySelectorAll('.sidebar-nav .nav-link').forEach(link => {
-      link.classList.remove('active');
-    });
-    
-    // Show selected section
-    document.getElementById(sectionName + 'Section').classList.remove('hidden');
-    
-    // Add active class to clicked nav link
-    event.target.classList.add('active');
-    
-    // Load section data
-    switch (sectionName) {
-      case 'dashboard':
-        loadDashboardData();
-        break;
-      case 'orders':
-        loadOrdersData();
-        break;
-      case 'analytics':
-        loadAnalyticsData();
-        break;
-      case 'products':
-        loadProductsData();
-        break;
-      case 'reports':
-        loadReportsData();
-        break;
-    }
-  }
-
-  // Load dashboard data
-  async function loadDashboardData() {
-    try {
-      const ordersSnapshot = await getDocs(collection(db, 'orders'));
-      allOrders = [];
-      ordersSnapshot.forEach(doc => {
-        allOrders.push({ id: doc.id, ...doc.data() });
+      // Save user data
+      await setDoc(doc(db, 'users', user.uid), {
+        name,
+        email,
+        phone,
+        address: address || '',
+        createdAt: serverTimestamp()
       });
 
-      // Update stats
-      updateDashboardStats();
-      createSalesChart();
-      createStatusChart();
-    } catch (error) {
-      console.error('Error loading dashboard data:', error);
-    }
-  }
-
-  function updateDashboardStats() {
-    const totalOrders = allOrders.length;
-    const pendingOrders = allOrders.filter(order => order.status === 'pending').length;
-    const deliveredOrders = allOrders.filter(order => order.status === 'delivered').length;
-    const totalRevenue = allOrders.reduce((sum, order) => sum + order.total, 0);
-
-    document.getElementById('totalOrdersCount').textContent = totalOrders;
-    document.getElementById('pendingOrdersCount').textContent = pendingOrders;
-    document.getElementById('deliveredOrdersCount').textContent = deliveredOrders;
-    document.getElementById('totalRevenueAmount').textContent = `₹${totalRevenue.toFixed(2)}`;
-  }
-
-  function createSalesChart() {
-    const ctx = document.getElementById('salesChart').getContext('2d');
-    
-    // Destroy existing chart
-    if (salesChart) {
-      salesChart.destroy();
-    }
-
-    // Group orders by date
-    const salesByDate = {};
-    allOrders.forEach(order => {
-      if (order.createdAt) {
-        const date = order.createdAt.toDate().toDateString();
-        salesByDate[date] = (salesByDate[date] || 0) + order.total;
-      }
-    });
-
-    const labels = Object.keys(salesByDate).slice(-7); // Last 7 days
-    const data = labels.map(date => salesByDate[date] || 0);
-
-    salesChart = new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels: labels.map(date => new Date(date).toLocaleDateString()),
-        datasets: [{
-          label: 'Sales (₹)',
-          data: data,
-          borderColor: '#3182ce',
-          backgroundColor: 'rgba(49, 130, 206, 0.1)',
-          borderWidth: 3,
-          fill: true,
-          tension: 0.4
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: {
-            display: false
-          }
-        },
-        scales: {
-          y: {
-            beginAtZero: true,
-            ticks: {
-              callback: function(value) {
-                return '₹' + value;
-              }
-            }
-          }
-        }
-      }
-    });
-  }
-
-  function createStatusChart() {
-    const ctx = document.getElementById('statusChart').getContext('2d');
-    
-    // Destroy existing chart
-    if (statusChart) {
-      statusChart.destroy();
-    }
-
-    const statusCounts = {
-      pending: allOrders.filter(o => o.status === 'pending').length,
-      confirmed: allOrders.filter(o => o.status === 'confirmed').length,
-      delivered: allOrders.filter(o => o.status === 'delivered').length,
-      cancelled: allOrders.filter(o => o.status === 'cancelled').length
-    };
-
-    statusChart = new Chart(ctx, {
-      type: 'doughnut',
-      data: {
-        labels: ['Pending', 'Confirmed', 'Delivered', 'Cancelled'],
-        datasets: [{
-          data: [statusCounts.pending, statusCounts.confirmed, statusCounts.delivered, statusCounts.cancelled],
-          backgroundColor: ['#d69e2e', '#3182ce', '#38a169', '#e53e3e'],
-          borderWidth: 0
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: {
-            position: 'bottom'
-          }
-        }
-      }
-    });
-  }
-
-  // Load orders data
-  async function loadOrdersData() {
-    try {
-      if (allOrders.length === 0) {
-        const ordersSnapshot = await getDocs(query(collection(db, 'orders'), orderBy('createdAt', 'desc')));
-        allOrders = [];
-        ordersSnapshot.forEach(doc => {
-          allOrders.push({ id: doc.id, ...doc.data() });
-        });
-      }
+      // Auto-login after registration
+      currentUser = user;
+      await loadUserData();
+      isLoggedIn = true;
       
-      filteredOrders = [...allOrders];
-      displayOrders();
+      hideLoginModal();
+      showUserView();
+      showSuccess('Registration successful! Welcome to Supreme Enterprises');
+      
+    } catch (error) {
+      showError('Registration failed: ' + error.message);
+    } finally {
+      hideLoading();
+    }
+  }
+
+  async function logout() {
+    await signOut(auth);
+    currentUser = null;
+    currentUserData = null;
+    isLoggedIn = false;
+    cart = [];
+    updateCartDisplay();
+    showPublicView();
+  }
+
+  // Load user data
+  async function loadUserData() {
+    if (!currentUser) return;
+    
+    const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+    if (userDoc.exists()) {
+      currentUserData = userDoc.data();
+      if (!currentUserData.address) {
+        currentUserData.address = '';
+      }
+      document.getElementById('userName').textContent = currentUserData.name;
+    }
+  }
+
+  // Product functions
+  function loadProducts() {
+    const grid = document.getElementById('productsGrid');
+    grid.innerHTML = '';
+
+    products.forEach(product => {
+      const productCard = createProductCard(product);
+      grid.appendChild(productCard);
+    });
+  }
+
+  function createProductCard(product) {
+    const col = document.createElement('div');
+    col.className = 'col-md-6 col-lg-4 col-xl-3';
+    
+    const cartItem = cart.find(item => item.id === product.id);
+    const quantityInCart = cartItem ? cartItem.quantity : 0;
+    
+    let actionButton = '';
+    if (isLoggedIn) {
+      if (quantityInCart > 0) {
+        actionButton = `
+          <button class="btn btn-success w-100 view-cart-btn" onclick="showCart()">
+            <i class="bi bi-cart-check me-2"></i>View Cart (${quantityInCart})
+          </button>
+        `;
+      } else {
+        actionButton = `
+          <button class="btn btn-primary w-100" onclick="addToCart('${product.id}')" ${!product.inStock ? 'disabled' : ''}>
+            <i class="bi bi-cart-plus me-2"></i>${product.inStock ? 'Add to Cart' : 'Out of Stock'}
+          </button>
+        `;
+      }
+    } else {
+      actionButton = `
+        <button class="btn btn-outline-primary w-100" onclick="showLoginModal()">
+          <i class="bi bi-person-circle me-2"></i>Login to Order
+        </button>
+      `;
+    }
+    
+    col.innerHTML = `
+      <div class="card product-card h-100">
+        <div class="position-relative">
+          <img src="${product.image}" class="product-image" alt="${product.name}">
+          <div class="product-badge">${product.category}</div>
+        </div>
+        <div class="card-body d-flex flex-column">
+          <h6 class="card-title fw-bold">${product.name}</h6>
+          <p class="card-text text-muted small flex-grow-1">${product.description}</p>
+          <div class="product-meta">
+            <span class="product-category">${product.size}</span>
+            <span class="bottle-count">${product.bottleCount}</span>
+          </div>
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <span class="product-price">₹${product.price}</span>
+            <small class="text-muted">per case</small>
+          </div>
+          ${isLoggedIn ? `
+            <div class="quantity-control-wrapper mb-3">
+              <div class="quantity-control">
+                <button class="quantity-btn decrease" onclick="changeQuantity('${product.id}', -1)">
+                  <i class="bi bi-dash"></i>
+                </button>
+                <input type="number" id="qty-${product.id}" class="quantity-input" value="1" min="1" max="${product.stockQuantity}">
+                <button class="quantity-btn increase" onclick="changeQuantity('${product.id}', 1)">
+                  <i class="bi bi-plus"></i>
+                </button>
+              </div>
+            </div>
+          ` : ''}
+          ${actionButton}
+        </div>
+      </div>
+    `;
+    
+    return col;
+  }
+
+  function changeQuantity(productId, change) {
+    const input = document.getElementById(`qty-${productId}`);
+    const currentValue = parseInt(input.value);
+    const newValue = Math.max(1, Math.min(currentValue + change, parseInt(input.max)));
+    input.value = newValue;
+  }
+
+  function filterProducts() {
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+    const categoryFilter = document.getElementById('categoryFilter').value;
+    const sortFilter = document.getElementById('sortFilter').value;
+
+    let filteredProducts = products.filter(product => {
+      const matchesSearch = product.name.toLowerCase().includes(searchTerm) ||
+                           product.description.toLowerCase().includes(searchTerm);
+      const matchesCategory = !categoryFilter || product.category === categoryFilter;
+      return matchesSearch && matchesCategory && product.inStock;
+    });
+
+    // Sort products
+    switch (sortFilter) {
+      case 'price-low':
+        filteredProducts.sort((a, b) => a.price - b.price);
+        break;
+      case 'price-high':
+        filteredProducts.sort((a, b) => b.price - a.price);
+        break;
+      default:
+        filteredProducts.sort((a, b) => a.name.localeCompare(b.name));
+    }
+
+    const grid = document.getElementById('productsGrid');
+    grid.innerHTML = '';
+
+    filteredProducts.forEach(product => {
+      const productCard = createProductCard(product);
+      grid.appendChild(productCard);
+    });
+  }
+
+  // Cart functions
+  function addToCart(productId) {
+    if (!isLoggedIn) {
+      showLoginModal();
+      return;
+    }
+
+    const product = products.find(p => p.id === productId);
+    const quantity = parseInt(document.getElementById(`qty-${productId}`).value);
+
+    if (!product || quantity <= 0) return;
+
+    const existingItem = cart.find(item => item.id === productId);
+    if (existingItem) {
+      existingItem.quantity += quantity;
+    } else {
+      cart.push({
+        id: product.id,
+        name: product.name,
+        size: product.size,
+        price: product.price,
+        image: product.image,
+        bottleCount: product.bottleCount,
+        quantity: quantity
+      });
+    }
+
+    updateCartDisplay();
+    
+    // Show cart badge animation
+    const badge = document.getElementById('cartBadge');
+    const floatingBadge = document.getElementById('floatingCartBadge');
+    badge.classList.add('cart-badge');
+    floatingBadge.classList.add('cart-badge');
+    setTimeout(() => {
+      badge.classList.remove('cart-badge');
+      floatingBadge.classList.remove('cart-badge');
+    }, 500);
+  }
+
+  function removeFromCart(productId) {
+    cart = cart.filter(item => item.id !== productId);
+    updateCartDisplay();
+  }
+
+  function updateCartQuantity(productId, quantity) {
+    const item = cart.find(item => item.id === productId);
+    if (item) {
+      if (quantity <= 0) {
+        removeFromCart(productId);
+      } else {
+        item.quantity = quantity;
+        updateCartDisplay();
+      }
+    }
+  }
+
+  function clearCart() {
+    cart = [];
+    updateCartDisplay();
+  }
+
+  function updateCartDisplay() {
+    const cartItems = document.getElementById('cartItems');
+    const cartBadge = document.getElementById('cartBadge');
+    const floatingCartBadge = document.getElementById('floatingCartBadge');
+    
+    // Update badges
+    const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+    cartBadge.textContent = totalItems;
+    floatingCartBadge.textContent = totalItems;
+
+    // Update cart items
+    if (cart.length === 0) {
+      cartItems.innerHTML = `
+        <div class="empty-state">
+          <i class="bi bi-cart-x"></i>
+          <h6>Your cart is empty</h6>
+          <p class="text-muted">Add some products to get started</p>
+        </div>
+      `;
+    } else {
+      cartItems.innerHTML = cart.map(item => `
+        <div class="cart-item">
+          <div class="d-flex align-items-center">
+            <img src="${item.image}" alt="${item.name}" style="width: 60px; height: 60px; object-fit: cover;" class="rounded me-3">
+            <div class="flex-grow-1">
+              <h6 class="mb-1">${item.name}</h6>
+              <small class="text-muted">${item.size} (${item.bottleCount})</small>
+              <div class="d-flex justify-content-between align-items-center mt-2">
+                <div class="cart-quantity-controls">
+                  <button class="cart-quantity-btn" onclick="updateCartQuantity('${item.id}', ${item.quantity - 1})">
+                    <i class="bi bi-dash"></i>
+                  </button>
+                  <span class="cart-quantity-value">${item.quantity}</span>
+                  <button class="cart-quantity-btn" onclick="updateCartQuantity('${item.id}', ${item.quantity + 1})">
+                    <i class="bi bi-plus"></i>
+                  </button>
+                </div>
+                <button class="btn btn-sm btn-outline-danger" onclick="removeFromCart('${item.id}')">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </div>
+            </div>
+            <div class="text-end">
+              <div class="fw-bold text-primary">₹${(item.price * item.quantity).toFixed(2)}</div>
+              <small class="text-muted">₹${item.price} each</small>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    updateCartTotal();
+    refreshProductCards();
+  }
+
+  function updateCartTotal() {
+    const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    document.getElementById('cartTotal').textContent = `₹${total.toFixed(2)}`;
+    document.getElementById('checkoutBtn').disabled = cart.length === 0;
+  }
+
+  function refreshProductCards() {
+    const grid = document.getElementById('productsGrid');
+    if (grid) {
+      grid.innerHTML = '';
+      products.forEach(product => {
+        const productCard = createProductCard(product);
+        grid.appendChild(productCard);
+      });
+    }
+  }
+
+  function showCart() {
+    if (!isLoggedIn) {
+      showLoginModal();
+      return;
+    }
+    document.querySelector('.cart-overlay').classList.add('show');
+    document.getElementById('cartSidebar').classList.add('show');
+  }
+
+  function hideCart() {
+    document.querySelector('.cart-overlay').classList.remove('show');
+    document.getElementById('cartSidebar').classList.remove('show');
+  }
+
+  // Order functions
+  async function proceedToCheckout() {
+    if (!isLoggedIn) {
+      showLoginModal();
+      return;
+    }
+
+    if (cart.length === 0) return;
+
+    if (isLoading) return;
+    showLoading();
+
+    try {
+      await loadUserData();
+
+      if (!currentUserData.address || currentUserData.address.trim() === '') {
+        showError('Please add a delivery address in your profile before checkout');
+        const profileTab = new bootstrap.Tab(document.querySelector('[href="#profileTab"]'));
+        profileTab.show();
+        hideCart();
+        return;
+      }
+
+      const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+      const invoiceNumber = `INV-${Date.now()}`;
+      
+      const orderData = {
+        userId: currentUser.uid,
+        userName: currentUserData.name,
+        userEmail: currentUser.email,
+        userPhone: currentUserData.phone,
+        userAddress: currentUserData.address,
+        items: cart.map(item => ({
+          id: item.id,
+          name: item.name,
+          size: item.size,
+          price: item.price,
+          quantity: item.quantity,
+          image: item.image,
+          bottleCount: item.bottleCount
+        })),
+        total,
+        status: 'pending',
+        createdAt: serverTimestamp(),
+        invoiceNumber
+      };
+
+      // Add the order to Firestore
+      const docRef = await addDoc(collection(db, 'orders'), orderData);
+      lastOrderId = docRef.id;
+      
+      // Show success modal
+      showOrderSuccess(invoiceNumber, total);
+      
+      // Clear the cart
+      clearCart();
+      hideCart();
+      
+      // Refresh the orders and dashboard
+      loadOrders();
+      loadDashboardStats();
+      
+    } catch (error) {
+      showError('Failed to place order. Please try again.');
+      console.error('Error placing order:', error);
+    } finally {
+      hideLoading();
+    }
+  }
+
+  function showOrderSuccess(invoiceNumber, total) {
+    const modal = document.getElementById('orderSuccessModal');
+    document.getElementById('orderSuccessDetails').innerHTML = `
+      <p>Your order <strong>${invoiceNumber}</strong> has been placed successfully!</p>
+      <p class="fw-bold">Total: ₹${total.toFixed(2)}</p>
+      <p>You can view your order details in the "My Orders" section.</p>
+    `;
+    modal.classList.add('show');
+  }
+
+  function hideOrderSuccessModal() {
+    document.getElementById('orderSuccessModal').classList.remove('show');
+  }
+
+  function viewOrderDetails() {
+    hideOrderSuccessModal();
+    const ordersTab = new bootstrap.Tab(document.querySelector('[href="#ordersTab"]'));
+    ordersTab.show();
+    
+    if (lastOrderId) {
+      const orderElement = document.getElementById(`order-${lastOrderId}`);
+      if (orderElement) {
+        orderElement.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+  }
+
+  // Dashboard functions
+  async function loadDashboardStats() {
+    if (!currentUser) return;
+
+    try {
+      const q = query(
+        collection(db, 'orders'),
+        where('userId', '==', currentUser.uid)
+      );
+
+      const querySnapshot = await getDocs(q);
+      const orders = [];
+      querySnapshot.forEach(doc => {
+        orders.push(doc.data());
+      });
+
+      const totalOrders = orders.length;
+      const totalSpent = orders.reduce((sum, order) => sum + order.total, 0);
+      const pendingOrders = orders.filter(order => order.status === 'pending').length;
+      const deliveredOrders = orders.filter(order => order.status === 'delivered').length;
+
+      document.getElementById('totalOrders').textContent = totalOrders;
+      document.getElementById('totalSpent').textContent = `₹${totalSpent.toFixed(2)}`;
+      document.getElementById('pendingOrders').textContent = pendingOrders;
+      document.getElementById('deliveredOrders').textContent = deliveredOrders;
+
+      // Load recent orders
+      const recentOrders = orders.slice(0, 3);
+      const recentOrdersDiv = document.getElementById('recentOrders');
+      if (recentOrders.length === 0) {
+        recentOrdersDiv.innerHTML = `
+          <div class="empty-state">
+            <i class="bi bi-bag-x"></i>
+            <h6>No recent orders</h6>
+            <p class="text-muted">Your recent orders will appear here</p>
+          </div>
+        `;
+      } else {
+        recentOrdersDiv.innerHTML = recentOrders.map(order => `
+          <div class="order-card">
+            <div class="order-header">
+              <div class="d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">Order #${order.invoiceNumber}</h6>
+                <span class="order-status order-status-${order.status}">${order.status.charAt(0).toUpperCase() + order.status.slice(1)}</span>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="d-flex justify-content-between">
+                <div>
+                  <p class="mb-1"><strong>Items:</strong> ${order.items.length} products</p>
+                  <p class="mb-0"><strong>Date:</strong> ${order.createdAt ? new Date(order.createdAt.toDate()).toLocaleDateString() : 'N/A'}</p>
+                </div>
+                <div class="text-end">
+                  <h6 class="text-primary mb-0">₹${order.total.toFixed(2)}</h6>
+                </div>
+              </div>
+            </div>
+          </div>
+        `).join('');
+      }
+
+    } catch (error) {
+      console.error('Error loading dashboard stats:', error);
+    }
+  }
+
+  // Load orders
+  async function loadOrders() {
+    if (!currentUser) return;
+
+    try {
+      const q = query(
+        collection(db, 'orders'),
+        where('userId', '==', currentUser.uid),
+        orderBy('createdAt', 'desc')
+      );
+
+      const querySnapshot = await getDocs(q);
+      const ordersList = document.getElementById('ordersList');
+
+      if (querySnapshot.empty) {
+        ordersList.innerHTML = `
+          <div class="empty-state">
+            <i class="bi bi-bag-x"></i>
+            <h5>No orders yet</h5>
+            <p class="text-muted">Your orders will appear here once you place them.</p>
+          </div>
+        `;
+        return;
+      }
+
+      ordersList.innerHTML = '';
+      querySnapshot.forEach(doc => {
+        const order = { id: doc.id, ...doc.data() };
+        const orderCard = createOrderCard(order);
+        ordersList.appendChild(orderCard);
+      });
+
     } catch (error) {
       console.error('Error loading orders:', error);
     }
   }
 
-  function displayOrders() {
-    const ordersList = document.getElementById('ordersList');
+  function createOrderCard(order) {
+    const div = document.createElement('div');
+    div.className = 'order-card';
+    div.id = `order-${order.id}`;
     
-    if (filteredOrders.length === 0) {
-      ordersList.innerHTML = `
-        <div class="empty-state">
-          <i class="bi bi-bag-x"></i>
-          <h5>No orders found</h5>
-          <p>No orders match your current filters.</p>
+    const statusClass = `order-status-${order.status}`;
+    const statusText = order.status.charAt(0).toUpperCase() + order.status.slice(1);
+    
+    div.innerHTML = `
+      <div class="order-header">
+        <div class="d-flex justify-content-between align-items-center">
+          <h6 class="mb-0">Order #${order.invoiceNumber}</h6>
+          <span class="order-status ${statusClass}">${statusText}</span>
         </div>
-      `;
-      return;
-    }
-
-    ordersList.innerHTML = filteredOrders.map(order => `
-      <div class="order-card">
-        <div class="order-header">
-          <div>
-            <h6 class="mb-0">Order #${order.invoiceNumber}</h6>
-            <small class="text-muted">${order.userName} - ${order.userEmail}</small>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-8">
+            <p class="mb-2"><strong>Date:</strong> ${order.createdAt ? new Date(order.createdAt.toDate()).toLocaleDateString() : 'N/A'}</p>
+            <p class="mb-2"><strong>Items:</strong> ${order.items.length} products (${order.items.reduce((sum, item) => sum + item.quantity, 0)} total quantity)</p>
+            <div class="mb-2">
+              <strong>Products:</strong>
+              <ul class="list-unstyled ms-3">
+                ${order.items.map(item => `
+                  <li class="small text-muted">• ${item.name} (${item.size}, ${item.bottleCount}) × ${item.quantity} = ₹${(item.price * item.quantity).toFixed(2)}</li>
+                `).join('')}
+              </ul>
+            </div>
+            <p class="mb-0"><strong>Delivery Address:</strong> ${order.userAddress}</p>
           </div>
-          <span class="status-badge status-${order.status}">${order.status}</span>
-        </div>
-        <div class="order-body">
-          <div class="row">
-            <div class="col-md-8">
-              <p class="mb-2"><strong>Date:</strong> ${order.createdAt ? new Date(order.createdAt.toDate()).toLocaleDateString() : 'N/A'}</p>
-              <p class="mb-2"><strong>Items:</strong> ${order.items.length} products (${order.items.reduce((sum, item) => sum + item.quantity, 0)} total)</p>
-              <p class="mb-2"><strong>Address:</strong> ${order.userAddress}</p>
-              <p class="mb-2"><strong>Phone:</strong> ${order.userPhone}</p>
-              <div class="mb-2">
-                <strong>Products:</strong>
-                <ul class="list-unstyled ms-3 small">
-                  ${order.items.map(item => `
-                    <li>• ${item.name} (${item.size}) × ${item.quantity} = ₹${(item.price * item.quantity).toFixed(2)}</li>
-                  `).join('')}
-                </ul>
-              </div>
-            </div>
-            <div class="col-md-4 text-end">
-              <h5 class="text-primary mb-3">₹${order.total.toFixed(2)}</h5>
-              <div class="d-flex flex-column gap-2">
-                ${order.status === 'pending' ? `
-                  <button class="btn btn-success btn-sm" onclick="updateOrderStatus('${order.id}', 'confirmed')">
-                    <i class="bi bi-check-circle me-1"></i>Confirm
-                  </button>
-                ` : ''}
-                ${order.status === 'confirmed' ? `
-                  <button class="btn btn-primary btn-sm" onclick="updateOrderStatus('${order.id}', 'delivered')">
-                    <i class="bi bi-truck me-1"></i>Mark Delivered
-                  </button>
-                ` : ''}
-                ${(order.status === 'pending' || order.status === 'confirmed') ? `
-                  <button class="btn btn-danger btn-sm" onclick="updateOrderStatus('${order.id}', 'cancelled')">
-                    <i class="bi bi-x-circle me-1"></i>Cancel
-                  </button>
-                ` : ''}
-              </div>
-            </div>
+          <div class="col-md-4 text-end">
+            <h5 class="text-primary mb-3">Total: ₹${order.total.toFixed(2)}</h5>
+            ${(order.status === 'confirmed' || order.status === 'delivered') ? `
+              <button class="btn btn-sm btn-outline-primary" onclick="printInvoice('${order.id}')">
+                <i class="bi bi-printer me-2"></i>Print Invoice
+              </button>` : ''
+            }
           </div>
         </div>
       </div>
-    `).join('');
+    `;
+    
+    return div;
   }
 
-  // Update order status
-  async function updateOrderStatus(orderId, newStatus) {
+  // Print invoice
+  async function printInvoice(orderId) {
     try {
-      await updateDoc(doc(db, 'orders', orderId), {
-        status: newStatus
-      });
-
-      // Update local data
-      const orderIndex = allOrders.findIndex(order => order.id === orderId);
-      if (orderIndex !== -1) {
-        allOrders[orderIndex].status = newStatus;
+      const orderDoc = await getDoc(doc(db, 'orders', orderId));
+      if (!orderDoc.exists()) {
+        showError('Order not found');
+        return;
       }
 
-      const filteredIndex = filteredOrders.findIndex(order => order.id === orderId);
-      if (filteredIndex !== -1) {
-        filteredOrders[filteredIndex].status = newStatus;
-      }
-
-      displayOrders();
-      updateDashboardStats();
-      createStatusChart();
-
-      alert(`Order #${allOrders[orderIndex].invoiceNumber} status updated to ${newStatus}`);
-    } catch (error) {
-      console.error('Error updating order status:', error);
-      alert('Failed to update order status. Please try again.');
-    }
-  }
-
-  // Filter orders
-  function filterOrders() {
-    const statusFilter = document.getElementById('statusFilter').value;
-    const dateFilter = document.getElementById('dateFilter').value;
-    const searchFilter = document.getElementById('searchFilter').value.toLowerCase();
-
-    filteredOrders = allOrders.filter(order => {
-      const matchesStatus = !statusFilter || order.status === statusFilter;
-      const matchesDate = !dateFilter || (order.createdAt && order.createdAt.toDate().toDateString() === new Date(dateFilter).toDateString());
-      const matchesSearch = !searchFilter || 
-        order.userName.toLowerCase().includes(searchFilter) || 
-        order.invoiceNumber.toLowerCase().includes(searchFilter) ||
-        order.userEmail.toLowerCase().includes(searchFilter);
-
-      return matchesStatus && matchesDate && matchesSearch;
-    });
-
-    displayOrders();
-  }
-
-  function clearFilters() {
-    document.getElementById('statusFilter').value = '';
-    document.getElementById('dateFilter').value = '';
-    document.getElementById('searchFilter').value = '';
-    filteredOrders = [...allOrders];
-    displayOrders();
-  }
-
-  // Load analytics data
-  async function loadAnalyticsData() {
-    try {
-      if (allOrders.length === 0) {
-        await loadDashboardData();
-      }
+      const order = orderDoc.data();
       
-      createDailySalesChart();
-      createTopProductsChart();
-    } catch (error) {
-      console.error('Error loading analytics data:', error);
-    }
-  }
-
-  function createDailySalesChart() {
-    const ctx = document.getElementById('dailySalesChart').getContext('2d');
-    
-    if (dailySalesChart) {
-      dailySalesChart.destroy();
-    }
-
-    // Last 30 days
-    const last30Days = {};
-    const today = new Date();
-    for (let i = 29; i >= 0; i--) {
-      const date = new Date(today);
-      date.setDate(date.getDate() - i);
-      last30Days[date.toDateString()] = 0;
-    }
-
-    allOrders.forEach(order => {
-      if (order.createdAt) {
-        const dateStr = order.createdAt.toDate().toDateString();
-        if (last30Days.hasOwnProperty(dateStr)) {
-          last30Days[dateStr] += order.total;
-        }
-      }
-    });
-
-    const labels = Object.keys(last30Days).map(date => new Date(date).toLocaleDateString());
-    const data = Object.values(last30Days);
-
-    dailySalesChart = new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels: labels,
-        datasets: [{
-          label: 'Daily Sales (₹)',
-          data: data,
-          backgroundColor: 'rgba(49, 130, 206, 0.7)',
-          borderColor: '#3182ce',
-          borderWidth: 1
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: {
-            display: false
-          }
-        },
-        scales: {
-          y: {
-            beginAtZero: true,
-            ticks: {
-              callback: function(value) {
-                return '₹' + value;
-              }
-            }
-          }
-        }
-      }
-    });
-  }
-
-  function createTopProductsChart() {
-    const ctx = document.getElementById('topProductsChart').getContext('2d');
-    
-    if (topProductsChart) {
-      topProductsChart.destroy();
-    }
-
-    // Calculate product sales
-    const productSales = {};
-    allOrders.forEach(order => {
-      order.items.forEach(item => {
-        const key = `${item.name} (${item.size})`;
-        productSales[key] = (productSales[key] || 0) + (item.price * item.quantity);
-      });
-    });
-
-    // Get top 10 products
-    const sortedProducts = Object.entries(productSales)
-      .sort(([,a], [,b]) => b - a)
-      .slice(0, 10);
-
-    const labels = sortedProducts.map(([name]) => name);
-    const data = sortedProducts.map(([,value]) => value);
-
-    topProductsChart = new Chart(ctx, {
-      type: 'pie',
-      data: {
-        labels: labels,
-        datasets: [{
-          data: data,
-          backgroundColor: [
-            '#3182ce', '#38a169', '#d69e2e', '#e53e3e', '#805ad5',
-            '#dd6b20', '#319795', '#c53030', '#2b6cb0', '#2f855a'
-          ]
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: {
-            position: 'bottom',
-            labels: {
-              boxWidth: 12
-            }
-          }
-        }
-      }
-    });
-  }
-
-  // Load products data
-  async function loadProductsData() {
-    try {
-      if (allOrders.length === 0) {
-        await loadDashboardData();
-      }
-
-      const productStats = {};
-      
-      allOrders.forEach(order => {
-        order.items.forEach(item => {
-          const key = item.id;
-          if (!productStats[key]) {
-            productStats[key] = {
-              name: item.name,
-              size: item.size,
-              category: getProductCategory(item.name),
-              totalSold: 0,
-              totalRevenue: 0,
-              orderCount: 0,
-              lastOrdered: null
-            };
-          }
-          
-          productStats[key].totalSold += item.quantity;
-          productStats[key].totalRevenue += item.price * item.quantity;
-          productStats[key].orderCount += 1;
-          
-          if (!productStats[key].lastOrdered || order.createdAt > productStats[key].lastOrdered) {
-            productStats[key].lastOrdered = order.createdAt;
-          }
-        });
-      });
-
-      displayProductsTable(Object.values(productStats));
-    } catch (error) {
-      console.error('Error loading products data:', error);
-    }
-  }
-
-  function getProductCategory(productName) {
-    if (productName.toLowerCase().includes('cola')) return 'Cola';
-    if (productName.toLowerCase().includes('orange')) return 'Fruit Drinks';
-    if (productName.toLowerCase().includes('lemon')) return 'Fruit Drinks';
-    if (productName.toLowerCase().includes('mango')) return 'Juice';
-    if (productName.toLowerCase().includes('power') || productName.toLowerCase().includes('boost')) return 'Energy Drinks';
-    if (productName.toLowerCase().includes('water')) return 'Water';
-    if (productName.toLowerCase().includes('soda')) return 'Soda';
-    return 'Others';
-  }
-
-  function displayProductsTable(products) {
-    const tbody = document.getElementById('productsTableBody');
-    
-    if (products.length === 0) {
-      tbody.innerHTML = `
-        <tr>
-          <td colspan="6" class="text-center py-4">
-            <div class="empty-state">
-              <i class="bi bi-box-seam"></i>
-              <p>No product data available</p>
+      const printWindow = window.open('', '', 'width=800,height=600');
+      const invoiceHTML = `
+        <html>
+          <head>
+            <title>Invoice - ${order.invoiceNumber}</title>
+            <style>
+              body { font-family: Arial, sans-serif; padding: 20px; }
+              .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #333; padding-bottom: 20px; }
+              .company-name { font-size: 28px; font-weight: bold; color: #1a365d; margin-bottom: 10px; }
+              .company-tagline { font-size: 14px; color: #666; margin-bottom: 20px; }
+              .invoice-info { display: flex; justify-content: space-between; margin-bottom: 30px; }
+              .invoice-details, .customer-details { flex: 1; }
+              .invoice-details { margin-right: 20px; }
+              .section-title { font-size: 16px; font-weight: bold; margin-bottom: 10px; color: #333; }
+              table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+              th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+              th { background-color: #f8f9fa; font-weight: bold; }
+              .total-section { text-align: right; margin-top: 30px; }
+              .total-row { font-weight: bold; font-size: 18px; color: #1a365d; }
+              .footer { text-align: center; margin-top: 40px; font-size: 12px; color: #666; border-top: 1px solid #ddd; padding-top: 20px; }
+              .status-badge { padding: 5px 10px; border-radius: 15px; font-size: 12px; font-weight: bold; }
+              .status-pending { background-color: #fed7d7; color: #c53030; }
+              .status-confirmed { background-color: #bee3f8; color: #2b6cb0; }
+              .status-delivered { background-color: #c6f6d5; color: #2f855a; }
+            </style>
+          </head>
+          <body>
+            <div class="header">
+              <div class="company-name">SUPREME ENTERPRISES</div>
+              <div class="company-tagline">Premium Quality Beverages</div>
             </div>
-          </td>
-        </tr>
+            
+            <div class="invoice-info">
+              <div class="invoice-details">
+                <div class="section-title">Invoice Details</div>
+                <p><strong>Invoice Number:</strong> ${order.invoiceNumber}</p>
+                <p><strong>Order Date:</strong> ${order.createdAt ? new Date(order.createdAt.toDate()).toLocaleDateString() : 'N/A'}</p>
+                <p><strong>Status:</strong> <span class="status-badge status-${order.status}">${order.status.toUpperCase()}</span></p>
+              </div>
+              
+              <div class="customer-details">
+                <div class="section-title">Customer Details</div>
+                <p><strong>Name:</strong> ${order.userName}</p>
+                <p><strong>Email:</strong> ${order.userEmail}</p>
+                <p><strong>Phone:</strong> ${order.userPhone}</p>
+                <p><strong>Address:</strong> ${order.userAddress}</p>
+              </div>
+            </div>
+            
+            <table>
+              <thead>
+                <tr>
+                  <th>Product</th>
+                  <th>Size</th>
+                  <th>Quantity</th>
+                  <th>Bottles/Case</th>
+                  <th>Rate (₹)</th>
+                  <th>Amount (₹)</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${order.items.map(item => `
+                  <tr>
+                    <td>${item.name}</td>
+                    <td>${item.size}</td>
+                    <td>${item.quantity}</td>
+                    <td>${item.bottleCount}</td>
+                    <td>₹${item.price.toFixed(2)}</td>
+                    <td>₹${(item.price * item.quantity).toFixed(2)}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+            
+            <div class="total-section">
+              <p class="total-row">Total: ₹${order.total.toFixed(2)}</p>
+            </div>
+            
+            <div class="footer">
+              <p><strong>Thank you for your business!</strong></p>
+              <p>This is a computer generated invoice. For any queries, please contact us.</p>
+              <p>SUPREME ENTERPRISES | Premium Quality Beverages</p>
+            </div>
+          </body>
+        </html>
       `;
-      return;
-    }
-
-    tbody.innerHTML = products
-      .sort((a, b) => b.totalRevenue - a.totalRevenue)
-      .map(product => `
-        <tr>
-          <td>
-            <strong>${product.name}</strong><br>
-            <small class="text-muted">${product.size}</small>
-          </td>
-          <td>${product.category}</td>
-          <td>${product.totalSold}</td>
-          <td>₹${product.totalRevenue.toFixed(2)}</td>
-          <td>₹${(product.totalRevenue / product.orderCount).toFixed(2)}</td>
-          <td>${product.lastOrdered ? new Date(product.lastOrdered.toDate()).toLocaleDateString() : 'Never'}</td>
-        </tr>
-      `).join('');
-  }
-
-  // Load reports data
-  async function loadReportsData() {
-    try {
-      if (allOrders.length === 0) {
-        await loadDashboardData();
-      }
-
-      const today = new Date();
-      const startOfWeek = new Date(today.setDate(today.getDate() - today.getDay()));
-      const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-      const startOfToday = new Date();
-      startOfToday.setHours(0, 0, 0, 0);
-
-      // Today's stats
-      const todayOrders = allOrders.filter(order => 
-        order.createdAt && order.createdAt.toDate() >= startOfToday
-      );
       
-      document.getElementById('todayOrders').textContent = todayOrders.length;
-      document.getElementById('todayRevenue').textContent = 
-        `₹${todayOrders.reduce((sum, order) => sum + order.total, 0).toFixed(2)}`;
-
-      // This week's stats
-      const weekOrders = allOrders.filter(order => 
-        order.createdAt && order.createdAt.toDate() >= startOfWeek
-      );
-      
-      document.getElementById('weekOrders').textContent = weekOrders.length;
-      document.getElementById('weekRevenue').textContent = 
-        `₹${weekOrders.reduce((sum, order) => sum + order.total, 0).toFixed(2)}`;
-
-      // This month's stats
-      const monthOrders = allOrders.filter(order => 
-        order.createdAt && order.createdAt.toDate() >= startOfMonth
-      );
-      
-      document.getElementById('monthOrders').textContent = monthOrders.length;
-      document.getElementById('monthRevenue').textContent = 
-        `₹${monthOrders.reduce((sum, order) => sum + order.total, 0).toFixed(2)}`;
-
+      printWindow.document.write(invoiceHTML);
+      printWindow.document.close();
+      printWindow.focus();
+      setTimeout(() => {
+        printWindow.print();
+        printWindow.close();
+      }, 500);
     } catch (error) {
-      console.error('Error loading reports data:', error);
+      console.error('Error printing invoice:', error);
+      showError('Failed to print invoice. Please try again.');
     }
   }
 
-  // Export functions
-  function exportOrders() {
-    const exportData = filteredOrders.map(order => ({
-      'Invoice Number': order.invoiceNumber,
-      'Customer Name': order.userName,
-      'Email': order.userEmail,
-      'Phone': order.userPhone,
-      'Address': order.userAddress,
-      'Status': order.status,
-      'Items Count': order.items.length,
-      'Total Quantity': order.items.reduce((sum, item) => sum + item.quantity, 0),
-      'Total Amount': order.total,
-      'Order Date': order.createdAt ? order.createdAt.toDate().toLocaleDateString() : 'N/A'
-    }));
+  // Profile functions
+  function loadProfile() {
+    if (!currentUserData) return;
 
-    exportToExcel(exportData, 'Orders_Report');
+    document.getElementById('profileName').value = currentUserData.name || '';
+    document.getElementById('profileEmail').value = currentUser.email || '';
+    document.getElementById('profilePhone').value = currentUserData.phone || '';
+    document.getElementById('profileAddress').value = currentUserData.address || '';
   }
 
-  function exportAnalytics() {
-    const productSales = {};
-    allOrders.forEach(order => {
-      order.items.forEach(item => {
-        const key = `${item.name} (${item.size})`;
-        productSales[key] = (productSales[key] || 0) + (item.price * item.quantity);
-      });
-    });
-
-    const exportData = Object.entries(productSales).map(([product, sales]) => ({
-      'Product': product,
-      'Total Sales': sales
-    }));
-
-    exportToExcel(exportData, 'Analytics_Report');
-  }
-
-  function exportProductReport() {
-    const productStats = {};
+  async function updateProfile(event) {
+    event.preventDefault();
     
-    allOrders.forEach(order => {
-      order.items.forEach(item => {
-        const key = item.id;
-        if (!productStats[key]) {
-          productStats[key] = {
-            name: item.name,
-            size: item.size,
-            category: getProductCategory(item.name),
-            totalSold: 0,
-            totalRevenue: 0,
-            orderCount: 0
-          };
-        }
-        
-        productStats[key].totalSold += item.quantity;
-        productStats[key].totalRevenue += item.price * item.quantity;
-        productStats[key].orderCount += 1;
-      });
-    });
-
-    const exportData = Object.values(productStats).map(product => ({
-      'Product Name': product.name,
-      'Size': product.size,
-      'Category': product.category,
-      'Units Sold': product.totalSold,
-      'Revenue': product.totalRevenue,
-      'Average Order Value': (product.totalRevenue / product.orderCount).toFixed(2)
-    }));
-
-    exportToExcel(exportData, 'Product_Sales_Report');
-  }
-
-  function exportTodayReport() {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    if (isLoading) return;
+    showLoading();
     
-    const todayOrders = allOrders.filter(order => 
-      order.createdAt && order.createdAt.toDate() >= today
-    );
+    const updatedData = {
+      name: document.getElementById('profileName').value,
+      phone: document.getElementById('profilePhone').value,
+      address: document.getElementById('profileAddress').value
+    };
 
-    const exportData = todayOrders.map(order => ({
-      'Invoice Number': order.invoiceNumber,
-      'Customer': order.userName,
-      'Status': order.status,
-      'Amount': order.total,
-      'Time': order.createdAt ? order.createdAt.toDate().toLocaleTimeString() : 'N/A'
-    }));
-
-    exportToExcel(exportData, `Today_Report_${new Date().toDateString().replace(/ /g, '_')}`);
-  }
-
-  function exportWeekReport() {
-    const today = new Date();
-    const startOfWeek = new Date(today.setDate(today.getDate() - today.getDay()));
-    
-    const weekOrders = allOrders.filter(order => 
-      order.createdAt && order.createdAt.toDate() >= startOfWeek
-    );
-
-    const exportData = weekOrders.map(order => ({
-      'Invoice Number': order.invoiceNumber,
-      'Customer': order.userName,
-      'Status': order.status,
-      'Amount': order.total,
-      'Date': order.createdAt ? order.createdAt.toDate().toLocaleDateString() : 'N/A'
-    }));
-
-    exportToExcel(exportData, 'This_Week_Report');
-  }
-
-  function exportMonthReport() {
-    const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-    
-    const monthOrders = allOrders.filter(order => 
-      order.createdAt && order.createdAt.toDate() >= startOfMonth
-    );
-
-    const exportData = monthOrders.map(order => ({
-      'Invoice Number': order.invoiceNumber,
-      'Customer': order.userName,
-      'Status': order.status,
-      'Amount': order.total,
-      'Date': order.createdAt ? order.createdAt.toDate().toLocaleDateString() : 'N/A'
-    }));
-
-    exportToExcel(exportData, 'This_Month_Report');
-  }
-
-  function exportToExcel(data, filename) {
-    const ws = XLSX.utils.json_to_sheet(data);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Report');
-    XLSX.writeFile(wb, `${filename}_${new Date().toISOString().split('T')[0]}.xlsx`);
+    try {
+      await updateDoc(doc(db, 'users', currentUser.uid), updatedData);
+      currentUserData = { ...currentUserData, ...updatedData };
+      document.getElementById('userName').textContent = currentUserData.name;
+      showSuccess('Profile updated successfully!');
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      showError('Failed to update profile. Please try again.');
+    } finally {
+      hideLoading();
+    }
   }
 
   // Expose functions to global scope
-  window.adminLogin = adminLogin;
-  window.adminLogout = adminLogout;
-  window.showSection = showSection;
-  window.updateOrderStatus = updateOrderStatus;
-  window.filterOrders = filterOrders;
-  window.clearFilters = clearFilters;
-  window.exportOrders = exportOrders;
-  window.exportAnalytics = exportAnalytics;
-  window.exportProductReport = exportProductReport;
-  window.exportTodayReport = exportTodayReport;
-  window.exportWeekReport = exportWeekReport;
-  window.exportMonthReport = exportMonthReport;
+  window.login = login;
+  window.register = register;
+  window.logout = logout;
+  window.showLoginForm = showLoginForm;
+  window.showRegisterForm = showRegisterForm;
+  window.showLoginModal = showLoginModal;
+  window.hideLoginModal = hideLoginModal;
+  window.addToCart = addToCart;
+  window.removeFromCart = removeFromCart;
+  window.updateCartQuantity = updateCartQuantity;
+  window.clearCart = clearCart;
+  window.changeQuantity = changeQuantity;
+  window.filterProducts = filterProducts;
+  window.showCart = showCart;
+  window.hideCart = hideCart;
+  window.proceedToCheckout = proceedToCheckout;
+  window.updateCartTotal = updateCartTotal;
+  window.updateProfile = updateProfile;
+  window.printInvoice = printInvoice;
+  window.hideOrderSuccessModal = hideOrderSuccessModal;
+  window.viewOrderDetails = viewOrderDetails;
 
-  // Initialize app
+  // Initialize app when page loads
   window.addEventListener('load', initApp);
 </script>
 </body>
